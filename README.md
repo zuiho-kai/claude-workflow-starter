@@ -8,32 +8,30 @@
 - 做远端 GPU 调试的开发者 → 这套体系对 SSH/Slurm/Docker/Lustre 跑大模型特别强
 - 任何想要"Claude 跨会话不丢失项目知识"的人 → memory + error book + 硬规则三件套
 
-## 装 4 步
+## 怎么用
 
-### Step 1: 复制到你的项目根目录
-
-```bash
-cp -r CLAUDE.md .gitignore memory/ .claude_errors/ docs/ .claude/ /path/to/your-project/
-```
-
-### Step 2: skills 进全局或项目内
+### Step 1: clone 这个 starter
 
 ```bash
-cp -r skills/* ~/.claude/skills/                                # 全局
-# 或
-cp -r skills/ /path/to/your-project/.claude/skills/             # 项目级
+git clone https://github.com/zuiho-kai/claude-workflow-starter.git
 ```
 
-### Step 3: 填 placeholder
+### Step 2: 把你的项目代码放进来
 
-- `docs/remote_server.md` 顶部"首次使用"表里所有 `<YOUR_XXX>` 替换成你的（**别 commit 密码**）
-- 推荐：直接告诉 Claude "把 remote_server.md 里的 placeholder 替换成 alice / 10.x.y.z / ..."，它会一次改完
+```bash
+cd claude-workflow-starter
+git clone https://github.com/vllm-project/vllm-omni.git   # 或你自己的项目
+```
 
-### Step 4（推荐）：装 codex-plugin-cc
+就这样。CLAUDE.md / memory / .claude_errors / .claude/hooks / skills 都已经在 starter 根目录了，Claude Code 在这个目录下启动就会自动读到。
 
-[openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) — 装好后每次 turn 结束自动 code review。
+### 可选：填远端服务器信息
 
-也提供 `/review` 手动审查命令。
+如果你要用远端 GPU 调试，把 `docs/remote_server.md` 顶部的 `<YOUR_XXX>` placeholder 替换成你的真实信息（**密码别 commit**，用环境变量 `$SSH_PASSWORD`）。
+
+### 推荐：装 codex-plugin-cc
+
+[openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) — 装好后每次 turn 结束自动 code review，也提供 `/review` 手动审查。
 
 ---
 
