@@ -69,7 +69,11 @@ cp docs/remote_server.template.md docs/remote_server.md
 - `reflect-system` — 自动从对话提取你的偏好/纠正 → 改进相关 skill
 - `clean-thinking` — 遇到 `Invalid signature in thinking block` API 报错时自动修
 
-**会话快爆时**：直接打 `/lastwords` 或 `/遗言`，自动生成交接文档到新会话。
+**会话快爆时**：打 `/lastwords` 或 `/遗言`，自动生成交接文档。
+
+`/lastwords` 会把当前会话浓缩成一份"遗言"markdown：项目背景、已完成/未完成的工作、关键决策、下一步建议、关键文件清单。标题是轻小说风格（读标题就知道会话死在哪一步）。保存到项目根目录 `遗言/` 文件夹。新会话开头 `cat 遗言/<文件名>` 就能 30 秒接手。
+
+这是 `.claude/commands/` 里的 slash command（不是 skill），只在你手动打 `/lastwords` 时触发。
 
 ---
 
