@@ -10,7 +10,7 @@ Show statistics about your learning ledger.
 ## Usage
 
 ```bash
-python3 ~/.claude/skills/reflect/scripts/learning_ledger.py stats
+python3 ~/.claude/skills/reflect-system/scripts/learning_ledger.py stats
 ```
 
 ## Example Output

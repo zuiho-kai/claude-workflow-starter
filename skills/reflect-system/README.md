@@ -80,16 +80,16 @@ Repo B: "Verwende uv statt pip" → Gleiche Learning erkannt!
 /reflect-stats
 
 # Promotion-Kandidaten anzeigen
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py list
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py list
 
 # Preview einer Promotion
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py preview <fingerprint>
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py preview <fingerprint>
 
 # Learning promoten
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py promote <fingerprint>
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py promote <fingerprint>
 
 # Alle eligible Learnings promoten
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py all --dry-run
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py all --dry-run
 ```
 
 ### Beispiel Output

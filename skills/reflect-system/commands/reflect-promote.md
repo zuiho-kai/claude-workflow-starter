@@ -15,19 +15,19 @@ When you correct Claude in multiple projects, those learnings become candidates 
 
 ```bash
 # List learnings ready for promotion
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py list
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py list
 
 # Preview what would be added
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py preview <fingerprint>
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py preview <fingerprint>
 
 # Promote a specific learning
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py promote <fingerprint>
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py promote <fingerprint>
 
 # Promote all eligible learnings
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py all
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py all
 
 # Dry-run (preview without changes)
-python3 ~/.claude/skills/reflect/scripts/promote_learning.py all --dry-run
+python3 ~/.claude/skills/reflect-system/scripts/promote_learning.py all --dry-run
 ```
 
 ## How It Works

@@ -599,7 +599,7 @@ Kein Reflection bei Session-Ende
 
 3. **Script ausführbar?**
    ```bash
-   ls -la ~/.claude/skills/reflect/scripts/hook-stop.sh
+   ls -la ~/.claude/skills/reflect-system/scripts/hook-stop.sh
    # Sollte -rwxr-xr-x zeigen
    ```
 
@@ -668,7 +668,7 @@ git checkout abc123f -- {skill-name}/SKILL.md
 **A:** Ja! Editieren Sie:
 
 ```bash
-~/.claude/skills/reflect/scripts/extract_signals.py
+~/.claude/skills/reflect-system/scripts/extract_signals.py
 ```
 
 Fügen Sie eigene Regex-Patterns hinzu:
@@ -683,7 +683,7 @@ CORRECTION_PATTERNS = [
 Oder erweitern Sie die Pattern-Library:
 
 ```bash
-~/.claude/skills/reflect/references/signal-patterns.md
+~/.claude/skills/reflect-system/references/signal-patterns.md
 ```
 
 ---
@@ -842,7 +842,7 @@ git push   # Pushe eigene Updates
 
 ```bash
 # Editieren Sie extract_signals.py
-nano ~/.claude/skills/reflect/scripts/extract_signals.py
+nano ~/.claude/skills/reflect-system/scripts/extract_signals.py
 ```
 
 Fügen Sie hinzu:
@@ -866,7 +866,7 @@ CORRECTION_PATTERNS.extend(CORRECTION_PATTERNS_DE)
 
 ```bash
 # Editieren Sie extract_signals.py
-nano ~/.claude/skills/reflect/scripts/extract_signals.py
+nano ~/.claude/skills/reflect-system/scripts/extract_signals.py
 ```
 
 Fügen Sie Filterfunktion hinzu:
@@ -894,7 +894,7 @@ def group_by_skill(signals):
 
 ```bash
 # Editieren Sie reflect.py
-nano ~/.claude/skills/reflect/scripts/reflect.py
+nano ~/.claude/skills/reflect-system/scripts/reflect.py
 ```
 
 Fügen Sie nach erfolgreichem Update hinzu:
@@ -922,14 +922,14 @@ def main():
 
 1. **Pattern-Library:**
    ```
-   ~/.claude/skills/reflect/references/signal-patterns.md
+   ~/.claude/skills/reflect-system/references/signal-patterns.md
    ```
 
 2. **Scripts:**
    ```
-   ~/.claude/skills/reflect/scripts/extract_signals.py    # Pattern-Detection
-   ~/.claude/skills/reflect/scripts/update_skill.py       # Skill-Updates
-   ~/.claude/skills/reflect/scripts/present_review.py     # Review-UI
+   ~/.claude/skills/reflect-system/scripts/extract_signals.py    # Pattern-Detection
+   ~/.claude/skills/reflect-system/scripts/update_skill.py       # Skill-Updates
+   ~/.claude/skills/reflect-system/scripts/present_review.py     # Review-UI
    ```
 
 3. **Git-History:**
@@ -945,7 +945,7 @@ def main():
 ```bash
 # Temporär für einen Test
 TRANSCRIPT_PATH=/path/to/transcript.jsonl \
-  python3 ~/.claude/skills/reflect/scripts/reflect.py
+  python3 ~/.claude/skills/reflect-system/scripts/reflect.py
 ```
 
 **Log-Datei prüfen:**
@@ -980,8 +980,8 @@ tail -f ~/.claude/reflect-hook.log
 ### Wichtige Pfade
 
 ```
-~/.claude/skills/reflect/              # Reflect Skill
-~/.claude/skills/reflect/.state/       # Status & Locks
+~/.claude/skills/reflect-system/              # Reflect Skill
+~/.claude/skills/reflect-system/.state/       # Status & Locks
 ~/.claude/skills/{skill}/.backups/     # Backups (30 Tage)
 ~/.claude/settings.local.json          # Hook-Konfiguration
 ~/.claude/reflect-hook.log             # Hook-Logs

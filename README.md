@@ -76,7 +76,7 @@ cp -r skills/ /path/to/your-project/.claude/skills/             # 项目级
 | 资产 | 用途 |
 |------|------|
 | `CLAUDE.md` | 22 条硬规则（含 worktree 约束）+ 项目索引 + Skills 表 |
-| `memory/` | 常识 book（21 篇 frontmatter MD）—— 跨会话项目知识 |
+| `memory/` | 常识 book（18 篇 frontmatter MD）—— 跨会话项目知识 |
 | `.claude_errors/` | error book —— 踩坑地册（已含 vLLM-Omni 实战 case） |
 | `docs/remote_server.md` | 脱敏版远端 GPU 服务器连接指南 |
 | `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command） |
@@ -85,8 +85,6 @@ cp -r skills/ /path/to/your-project/.claude/skills/             # 项目级
 | `skills/claudeception/` | 持续学习 → 自动生成 skill |
 | `skills/clean-thinking/` | 修 thinking 块 API 报错 |
 | `skills/reflect-system/` | 自动 reflect 用户纠正 |
-
-**注意：reflect-system 隐私风险**：reflect-system 会读取会话 transcript 分析你的对话内容（代码、路径、凭证片段都可能被扫到），并支持把学习结果提升到全局 `~/.claude/CLAUDE.md`。**默认关闭**——需要手动 `/reflect-on` 才会启用自动反思。使用前确认你的对话内容不含不想被持久化的敏感信息。
 
 ---
 
@@ -114,7 +112,7 @@ starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 ## 要改的（少量）
 
 - `CLAUDE.md` 前 21 条原硬规则全是 vLLM-Omni 实战，**保留作 case study**——用一阵后看哪些不适用你的项目，自己删
-- `memory/` 里 vLLM-Omni 特有的（如 `baseline_i2t_output.md`、`ar_dit_bridge.md`）—— 用一阵后清掉，留下通用的
+- `memory/` 里 vLLM-Omni 特有的（如 `ar_dit_bridge.md`、`bidirectional_attention.md`）—— 用一阵后清掉，留下通用的
 - `.claude_errors/hunyuan_image3.md` —— 当 case study 看一遍，写自己的之前不要删（学格式）
 
 ---

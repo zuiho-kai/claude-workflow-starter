@@ -127,31 +127,30 @@ If this cannot be executed, state the blocker explicitly and do not claim the gu
 ## 目录布局
 
 ```
-D:/vllm-omni/
-├── vllm-omni/              # vLLM-Omni 仓库，主要工作区
-├── hunyuan3.0_ins/          # tencent/HunyuanImage-3.0-Instruct 官方源码 clone（只读参考，不要改）
+workflow-starter/
+├── CLAUDE.md                # 本文件（22 条硬规则 + 索引）
+├── README.md                # 怎么用：4 步 setup + 飞轮机制说明
+├── .gitignore               # 排除密码/凭证/临时文件
+├── 拉起claude.bat           # 快速启动 Claude Code（跳过权限确认）
+├── 启动官方claude.bat       # 带代理启动 Claude Code
 ├── docs/
-│   ├── architecture.md      # 核心架构、代码地图、命名约定、常见雷区
-│   ├── remote_server.md     # 远端 GPU 服务器连接指南（3 步快速连接）
-│   └── benchmark.md         # AR benchmark 结论、算存比分析
-├── scripts/
-│   ├── bench/               # 性能对比脚本（bench_ar_hf.py, bench_ar_vllm.py, official_i2t_baseline.py）
-│   ├── debug/               # 调试/dump 脚本（dump_omni_hidden.py, layer_compare.py 等）
-│   └── mooncake/            # Mooncake 分布式相关（YAML, patch_zmq_port.py）
-├── bench_results/           # 性能对比数据（JSON + 对比报告 MD）
-├── archive/                 # 历史文件（logs, old_results, old_docs, images）
-├── memory/                  # 项目记忆（跨会话持久化）
+│   ├── architecture.md      # 核心架构、代码地图、命名约定、雷区
+│   └── remote_server.md     # 远端 GPU 服务器连接指南（脱敏版）
+├── memory/                  # 项目记忆（跨会话持久化，18 篇 frontmatter MD）
 ├── .claude/                 # Claude Code 配置
-├── .claude_errors/          # Error book（踩坑记录）
-│   └── hunyuan_image3.md
-├── CLAUDE.md                # 本文件（索引）
-└── 启动官方claude.bat       # 用户启动 Claude Code 的脚本
+│   ├── settings.json        # Stop hook 注册
+│   ├── commands/            # lastwords.md + 遗言.md（会话交接 slash command）
+│   └── hooks/
+│       └── stop-gate.sh     # 数据飞轮门禁 hook
+├── .claude_errors/          # Error book（踩坑记录，6 篇）
+└── skills/                  # Custom skills（claudeception / clean-thinking / reflect-system）
 ```
 
 ## 快速索引
 
 | 主题 | 文件 | 说明 |
 |------|------|------|
+| 架构 & 代码地图 | [docs/architecture.md](docs/architecture.md) | vLLM-Omni 架构、代码地图、命名约定、雷区 |
 | 远端服务器 | [docs/remote_server.md](docs/remote_server.md) | SSH 连接、Slurm 申请、tmux 操作模板 |
 | Error Book | [.claude_errors/hunyuan_image3.md](.claude_errors/hunyuan_image3.md) | 踩坑记录，进入任何 phase 前先读 |
 

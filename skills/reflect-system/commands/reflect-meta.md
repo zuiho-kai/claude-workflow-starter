@@ -47,12 +47,12 @@ This will:
 
 View raw scores:
 ```bash
-python ~/.claude/skills/reflect/scripts/meta_learning.py scores
+python ~/.claude/skills/reflect-system/scripts/meta_learning.py scores
 ```
 
 Reset all meta-learning data:
 ```bash
-python ~/.claude/skills/reflect/scripts/meta_learning.py reset --confirm
+python ~/.claude/skills/reflect-system/scripts/meta_learning.py reset --confirm
 ```
 
 ## Privacy

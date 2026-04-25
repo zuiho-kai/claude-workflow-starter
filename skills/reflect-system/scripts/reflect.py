@@ -143,7 +143,7 @@ def commit_changes(changes):
 
 def update_last_reflection_timestamp():
     """Update the last reflection timestamp to prevent duplicates"""
-    timestamp_file = Path.home() / '.claude' / 'skills' / 'reflect' / '.state' / 'last-reflection.timestamp'
+    timestamp_file = Path.home() / '.claude' / 'skills' / 'reflect-system' / '.state' / 'last-reflection.timestamp'
     try:
         with open(timestamp_file, 'w') as f:
             f.write(datetime.now().isoformat())

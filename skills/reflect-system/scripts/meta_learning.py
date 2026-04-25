@@ -23,7 +23,7 @@ from collections import defaultdict
 
 
 # Constants - use same base directory as learning_ledger.py for consistency
-REFLECT_DIR = Path.home() / '.claude' / 'reflect'
+REFLECT_DIR = Path.home() / '.claude' / 'skills' / 'reflect-system'
 META_DIR = REFLECT_DIR / 'meta'
 PATTERN_SCORES_FILE = META_DIR / 'pattern-scores.json'
 FEEDBACK_LOG_FILE = META_DIR / 'feedback-log.jsonl'
