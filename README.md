@@ -63,7 +63,7 @@ cp -r skills/ /path/to/your-project/.claude/skills/             # 项目级
 
 **额外的自动化（skills/ 提供）**：
 
-- `claudeception` — 长会话自动从对话提炼 skill → `~/.claude/skills/`
+- `claudeception` — 数据飞轮核心：从会话自动提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分
 - `reflect-system` — 自动从对话提取你的偏好/纠正 → 改进相关 skill
 - `clean-thinking` — 遇到 `Invalid signature in thinking block` API 报错时自动修
 
@@ -82,7 +82,7 @@ cp -r skills/ /path/to/your-project/.claude/skills/             # 项目级
 | `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command） |
 | `.claude/hooks/stop-gate.sh` | **核心自动化**：每次 turn 结束触发飞轮 |
 | `.claude/settings.json` | 注册上面的 hook |
-| `skills/claudeception/` | 持续学习 → 自动生成 skill |
+| `skills/claudeception/` | 数据飞轮自动积累：踩坑→error book，常识→memory，条目过多自动拆分 |
 | `skills/clean-thinking/` | 修 thinking 块 API 报错 |
 | `skills/reflect-system/` | 自动 reflect 用户纠正 |
 

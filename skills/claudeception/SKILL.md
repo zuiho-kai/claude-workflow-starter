@@ -1,389 +1,131 @@
 ---
 name: claudeception
 description: |
-  Claudeception is a continuous learning system that extracts reusable knowledge from work sessions.
-  Triggers: (1) /claudeception command to review session learnings, (2) "save this as a skill"
-  or "extract a skill from this", (3) "what did we learn?", (4) After any task involving
-  non-obvious debugging, workarounds, or trial-and-error discovery. Creates new Claude Code
-  skills when valuable, reusable knowledge is identified.
+  数据飞轮自动积累系统：从工作会话中提炼踩坑记录和常识知识，自动写入 .claude_errors/（error book）
+  和 memory/（常识 book），并在单文件条目过多时自动按主题拆分归类。
+  触发条件：(1) /claudeception 命令回顾本次会话 (2) 踩坑后说"记到 error book" (3) 发现非显然知识
+  (4) 任何涉及调试、workaround、反复试错的任务完成后。
+  不生成新 skill，只积累 error book 和 memory。
 author: Claude Code
-version: 3.0.0
+version: 4.0.0
 allowed-tools:
   - Read
   - Write
   - Edit
   - Grep
   - Glob
-  - WebSearch
-  - WebFetch
-  - Skill
   - AskUserQuestion
-  - TodoWrite
 ---
 
-# Claudeception
+# Claudeception — 数据飞轮自动积累
 
-You are Claudeception: a continuous learning system that extracts reusable knowledge from work sessions and 
-codifies it into new Claude Code skills. This enables autonomous improvement over time.
+从工作会话中提炼知识，自动写入 error book 和 memory。不生成新 skill。
 
-## Core Principle: Skill Extraction
+## 输出目标
 
-When working on tasks, continuously evaluate whether the current work contains extractable 
-knowledge worth preserving. Not every task produces a skill—be selective about what's truly 
-reusable and valuable.
+| 知识类型 | 写到哪 | 格式 |
+|---------|--------|------|
+| 踩坑（报错、走弯路、非预期行为） | `.claude_errors/<topic>.md` | Error Book 格式 |
+| 常识（通用模式、环境知识、协作偏好） | `memory/<topic>.md` | Memory frontmatter 格式 |
 
-## When to Extract a Skill
+## 触发条件
 
-Extract a skill when you encounter:
+以下任一情况出现时，自动执行提炼：
 
-1. **Non-obvious Solutions**: Debugging techniques, workarounds, or solutions that required 
-   significant investigation and wouldn't be immediately apparent to someone facing the same 
-   problem.
+1. 用户调用 `/claudeception`
+2. 用户说"记到 error book"、"加到 memory"、"记住这个"
+3. 调试花了 >10 分钟才解决的问题
+4. 报错信息和真正根因不一致（误导性报错）
+5. 试了多种方案才找到正确的（反复试错）
+6. 发现项目/环境特有的非显然知识
 
-2. **Project-Specific Patterns**: Conventions, configurations, or architectural decisions 
-   specific to this codebase that aren't documented elsewhere.
+## 分类判断
 
-3. **Tool Integration Knowledge**: How to properly use a specific tool, library, or API in 
-   ways that documentation doesn't cover well.
+问自己两个问题：
 
-4. **Error Resolution**: Specific error messages and their actual root causes/fixes, 
-   especially when the error message is misleading.
+1. **这是一个"坑"吗？**（报错了、走弯路了、浪费时间了）→ 写 `.claude_errors/`
+2. **这是一个"知识"吗？**（环境配置、版本兼容、命名约定、协作偏好）→ 写 `memory/`
 
-5. **Workflow Optimizations**: Multi-step processes that can be streamlined or patterns 
-   that make common tasks more efficient.
+如果两者都是（踩坑过程中发现了通用知识），两边都写。
 
-## Skill Quality Criteria
+## Error Book 格式
 
-Before extracting, verify the knowledge meets these criteria:
+追加到 `.claude_errors/<topic>.md`：
 
-- **Reusable**: Will this help with future tasks? (Not just this one instance)
-- **Non-trivial**: Is this knowledge that requires discovery, not just documentation lookup?
-- **Specific**: Can you describe the exact trigger conditions and solution?
-- **Verified**: Has this solution actually worked, not just theoretically?
-
-## Extraction Process
-
-### Step 1: Check for Existing Skills
-
-**Goal:** Find related skills before creating. Decide: update or create new.
-
-```sh
-# Skill directories (project-first, then user-level)
-SKILL_DIRS=(
-  ".claude/skills"
-  "$HOME/.claude/skills"
-  "$HOME/.codex/skills"
-  # Add other tool paths as needed
-)
-
-# List all skills
-rg --files -g 'SKILL.md' "${SKILL_DIRS[@]}" 2>/dev/null
-
-# Search by keywords
-rg -i "keyword1|keyword2" "${SKILL_DIRS[@]}" 2>/dev/null
-
-# Search by exact error message
-rg -F "exact error message" "${SKILL_DIRS[@]}" 2>/dev/null
-
-# Search by context markers (files, functions, config keys)
-rg -i "getServerSideProps|next.config.js|prisma.schema" "${SKILL_DIRS[@]}" 2>/dev/null
+```markdown
+## YYYY-MM-DD HH:MM — <一句话标题>
+**症状**：<报错/不符合预期的具体表现>
+**根因**：<分析后的真正原因>
+**解法**：<怎么修的>
+**对未来的提醒**：<下一次怎么避免>
 ```
 
-| Found                                            | Action                                                   |
-|--------------------------------------------------|----------------------------------------------------------|
-| Nothing related                                  | Create new                                               |
-| Same trigger and same fix                        | Update existing (e.g., `version: 1.0.0` → `1.1.0`)       |
-| Same trigger, different root cause               | Create new, add `See also:` links both ways              |
-| Partial overlap (same domain, different trigger) | Update existing with new "Variant" subsection            |
-| Same domain, different problem                   | Create new, add `See also: [skill-name]` in Notes        |
-| Stale or wrong                                   | Mark deprecated in Notes, add replacement link           |
+`<topic>` 按主题归类（如 `git_and_rebase.md`、`docker_and_container.md`、`model_loading.md`）。
 
-**Versioning:** patch = typos/wording, minor = new scenario, major = breaking changes or deprecation.
+## Memory 格式
 
-If multiple matches, open the closest one and compare Problem/Trigger Conditions before deciding.
-
-### Step 2: Identify the Knowledge
-
-Analyze what was learned:
-- What was the problem or task?
-- What was non-obvious about the solution?
-- What would someone need to know to solve this faster next time?
-- What are the exact trigger conditions (error messages, symptoms, contexts)?
-
-### Step 3: Research Best Practices (When Appropriate)
-
-Before creating the skill, search the web for current information when:
-
-**Always search for:**
-- Technology-specific best practices (frameworks, libraries, tools)
-- Current documentation or API changes
-- Common patterns or solutions for similar problems
-- Known gotchas or pitfalls in the problem domain
-- Alternative approaches or solutions
-
-**When to search:**
-- The topic involves specific technologies, frameworks, or tools
-- You're uncertain about current best practices
-- The solution might have changed after January 2025 (knowledge cutoff)
-- There might be official documentation or community standards
-- You want to verify your understanding is current
-
-**When to skip searching:**
-- Project-specific internal patterns unique to this codebase
-- Solutions that are clearly context-specific and wouldn't be documented
-- Generic programming concepts that are stable and well-understood
-- Time-sensitive situations where the skill needs to be created immediately
-
-**Search strategy:**
-```
-1. Search for official documentation: "[technology] [feature] official docs 2026"
-2. Search for best practices: "[technology] [problem] best practices 2026"
-3. Search for common issues: "[technology] [error message] solution 2026"
-4. Review top results and incorporate relevant information
-5. Always cite sources in a "References" section of the skill
-```
-
-**Example searches:**
-- "Next.js getServerSideProps error handling best practices 2026"
-- "Claude Code skill description semantic matching 2026"
-- "React useEffect cleanup patterns official docs 2026"
-
-**Integration with skill content:**
-- Add a "References" section at the end of the skill with source URLs
-- Incorporate best practices into the "Solution" section
-- Include warnings about deprecated patterns in the "Notes" section
-- Mention official recommendations where applicable
-
-### Step 4: Structure the Skill
-
-Create a new skill with this structure:
+新建或追加到 `memory/<topic>.md`：
 
 ```markdown
 ---
-name: [descriptive-kebab-case-name]
-description: |
-  [Precise description including: (1) exact use cases, (2) trigger conditions like 
-  specific error messages or symptoms, (3) what problem this solves. Be specific 
-  enough that semantic matching will surface this skill when relevant.]
-author: [original-author or "Claude Code"]
-version: 1.0.0
-date: [YYYY-MM-DD]
+name: <标题>
+description: <一句话摘要——要具体到能判断相关性>
+type: feedback | project | reference
 ---
 
-# [Skill Name]
+<内容>
 
-## Problem
-[Clear description of the problem this skill addresses]
-
-## Context / Trigger Conditions  
-[When should this skill be used? Include exact error messages, symptoms, or scenarios]
-
-## Solution
-[Step-by-step solution or knowledge to apply]
-
-## Verification
-[How to verify the solution worked]
-
-## Example
-[Concrete example of applying this skill]
-
-## Notes
-[Any caveats, edge cases, or related considerations]
-
-## References
-[Optional: Links to official documentation, articles, or resources that informed this skill]
+**Why:** <为什么这条知识重要>
+**How to apply:** <什么场景下用、怎么用>
 ```
 
-### Step 5: Write Effective Descriptions
+type 分类：
+- `feedback`：协作偏好、调试策略、工作流改进
+- `project`：项目特有的技术决策、配置、状态
+- `reference`：跨项目通用的技术知识
 
-The description field is critical for skill discovery. Include:
+## 写入后必做
 
-- **Specific symptoms**: Exact error messages, unexpected behaviors
-- **Context markers**: Framework names, file types, tool names
-- **Action phrases**: "Use when...", "Helps with...", "Solves..."
+1. **更新 CLAUDE.md 索引**：如果新建了 memory 文件，在 CLAUDE.md 的"项目记忆"表里加一行
+2. **检查升级条件**：如果同一个坑在 `.claude_errors/` 里出现 ≥2 次，提醒用户升级到 CLAUDE.md 硬规则区
 
-Example of a good description:
-```
-description: |
-  Fix for "ENOENT: no such file or directory" errors when running npm scripts 
-  in monorepos. Use when: (1) npm run fails with ENOENT in a workspace, 
-  (2) paths work in root but not in packages, (3) symlinked dependencies 
-  cause resolution failures. Covers node_modules resolution in Lerna, 
-  Turborepo, and npm workspaces.
-```
+## 自动拆分归类
 
-### Step 6: Save the Skill
+当单个文件条目过多时自动拆分：
 
-Save new skills to the appropriate location:
+### Error Book 拆分（`.claude_errors/` 单文件 >10 条）
+1. 读取文件所有 `## YYYY-MM-DD` 条目
+2. 按主题聚类（git 相关、docker 相关、模型加载相关、远端调试相关...）
+3. 拆成多个文件：`<原文件名>_<subtopic>.md`
+4. 原文件保留为索引，列出拆分后的文件链接
 
-- **Project-specific skills**: `.claude/skills/[skill-name]/SKILL.md`
-- **User-wide skills**: `~/.claude/skills/[skill-name]/SKILL.md`
+### Memory 拆分（`memory/` 总文件数 >25 或单文件 >2000 字）
+1. 检查是否有多个主题混在一个文件里
+2. 按主题拆分成独立文件
+3. 更新 CLAUDE.md 索引表
 
-Include any supporting scripts in a `scripts/` subdirectory if the skill benefits from 
-executable helpers.
+## 回顾模式（/claudeception）
 
-## Retrospective Mode
+会话结束前调用时：
 
-When `/claudeception` is invoked at the end of a session:
+1. 回顾本次会话的完整上下文
+2. 识别所有可提炼的知识点（踩坑 + 常识）
+3. 逐条分类并写入对应文件
+4. 检查是否需要拆分归类
+5. 报告：写了几条到哪些文件
 
-1. **Review the Session**: Analyze the conversation history for extractable knowledge
-2. **Identify Candidates**: List potential skills with brief justifications
-3. **Prioritize**: Focus on the highest-value, most reusable knowledge
-4. **Extract**: Create skills for the top candidates (typically 1-3 per session)
-5. **Summarize**: Report what skills were created and why
+## 质量标准
 
-## Self-Reflection Prompts
+写入前确认：
+- [ ] 内容是非显然的（不是文档里直接能查到的）
+- [ ] 内容是已验证的（实际发生过，不是猜测）
+- [ ] 内容是可复用的（下次遇到同样情况能用上）
+- [ ] 没有包含敏感信息（密码、IP、用户名用 placeholder）
+- [ ] 格式符合 Error Book / Memory 模板
 
-Use these prompts during work to identify extraction opportunities:
+## 不要做的事
 
-- "What did I just learn that wasn't obvious before starting?"
-- "If I faced this exact problem again, what would I wish I knew?"
-- "What error message or symptom led me here, and what was the actual cause?"
-- "Is this pattern specific to this project, or would it help in similar projects?"
-- "What would I tell a colleague who hits this same issue?"
-
-## Memory Consolidation
-
-When extracting skills, also consider:
-
-1. **Combining Related Knowledge**: If multiple related discoveries were made, consider 
-   whether they belong in one comprehensive skill or separate focused skills.
-
-2. **Updating Existing Skills**: Check if an existing skill should be updated rather than 
-   creating a new one.
-
-3. **Cross-Referencing**: Note relationships between skills in their documentation.
-
-## Quality Gates
-
-Before finalizing a skill, verify:
-
-- [ ] Description contains specific trigger conditions
-- [ ] Solution has been verified to work
-- [ ] Content is specific enough to be actionable
-- [ ] Content is general enough to be reusable
-- [ ] No sensitive information (credentials, internal URLs) is included
-- [ ] Skill doesn't duplicate existing documentation or skills
-- [ ] Web research conducted when appropriate (for technology-specific topics)
-- [ ] References section included if web sources were consulted
-- [ ] Current best practices (post-2025) incorporated when relevant
-
-## Anti-Patterns to Avoid
-
-- **Over-extraction**: Not every task deserves a skill. Mundane solutions don't need preservation.
-- **Vague descriptions**: "Helps with React problems" won't surface when needed.
-- **Unverified solutions**: Only extract what actually worked.
-- **Documentation duplication**: Don't recreate official docs; link to them and add what's missing.
-- **Stale knowledge**: Mark skills with versions and dates; knowledge can become outdated.
-
-## Skill Lifecycle
-
-Skills should evolve:
-
-1. **Creation**: Initial extraction with documented verification
-2. **Refinement**: Update based on additional use cases or edge cases discovered
-3. **Deprecation**: Mark as deprecated when underlying tools/patterns change
-4. **Archival**: Remove or archive skills that are no longer relevant
-
-## Example: Complete Extraction Flow
-
-**Scenario**: While debugging a Next.js app, you discover that `getServerSideProps` errors
-aren't showing in the browser console because they're server-side, and the actual error is
-in the terminal.
-
-**Step 1 - Identify the Knowledge**:
-- Problem: Server-side errors don't appear in browser console
-- Non-obvious aspect: Expected behavior for server-side code in Next.js
-- Trigger: Generic error page with empty browser console
-
-**Step 2 - Research Best Practices**:
-Search: "Next.js getServerSideProps error handling best practices 2026"
-- Found official docs on error handling
-- Discovered recommended patterns for try-catch in data fetching
-- Learned about error boundaries for server components
-
-**Step 3-5 - Structure and Save**:
-
-**Extraction**:
-
-```markdown
----
-name: nextjs-server-side-error-debugging
-description: |
-  Debug getServerSideProps and getStaticProps errors in Next.js. Use when: 
-  (1) Page shows generic error but browser console is empty, (2) API routes 
-  return 500 with no details, (3) Server-side code fails silently. Check 
-  terminal/server logs instead of browser for actual error messages.
-author: Claude Code
-version: 1.0.0
-date: 2024-01-15
----
-
-# Next.js Server-Side Error Debugging
-
-## Problem
-Server-side errors in Next.js don't appear in the browser console, making 
-debugging frustrating when you're looking in the wrong place.
-
-## Context / Trigger Conditions
-- Page displays "Internal Server Error" or custom error page
-- Browser console shows no errors
-- Using getServerSideProps, getStaticProps, or API routes
-- Error only occurs on navigation/refresh, not on client-side transitions
-
-## Solution
-1. Check the terminal where `npm run dev` is running—errors appear there
-2. For production, check server logs (Vercel dashboard, CloudWatch, etc.)
-3. Add try-catch with console.error in server-side functions for clarity
-4. Use Next.js error handling: return `{ notFound: true }` or `{ redirect: {...} }` 
-   instead of throwing
-
-## Verification
-After checking terminal, you should see the actual stack trace with file 
-and line numbers.
-
-## Notes
-- This applies to all server-side code in Next.js, not just data fetching
-- In development, Next.js sometimes shows a modal with partial error info
-- The `next.config.js` option `reactStrictMode` can cause double-execution
-  that makes debugging confusing
-
-## References
-- [Next.js Data Fetching: getServerSideProps](https://nextjs.org/docs/pages/building-your-application/data-fetching/get-server-side-props)
-- [Next.js Error Handling](https://nextjs.org/docs/pages/building-your-application/routing/error-handling)
-```
-
-## Integration with Workflow
-
-### Automatic Trigger Conditions
-
-Invoke this skill immediately after completing a task when ANY of these apply:
-
-1. **Non-obvious debugging**: The solution required >10 minutes of investigation and
-   wasn't found in documentation
-2. **Error resolution**: Fixed an error where the error message was misleading or the
-   root cause wasn't obvious
-3. **Workaround discovery**: Found a workaround for a tool/framework limitation that
-   required experimentation
-4. **Configuration insight**: Discovered project-specific setup that differs from
-   standard patterns
-5. **Trial-and-error success**: Tried multiple approaches before finding what worked
-
-### Explicit Invocation
-
-Also invoke when:
-- User runs `/claudeception` to review the session
-- User says "save this as a skill" or similar
-- User asks "what did we learn?"
-
-### Self-Check After Each Task
-
-After completing any significant task, ask yourself:
-- "Did I just spend meaningful time investigating something?"
-- "Would future-me benefit from having this documented?"
-- "Was the solution non-obvious from documentation alone?"
-
-If yes to any, invoke this skill immediately.
-
-Remember: The goal is continuous, autonomous improvement. Every valuable discovery
-should have the opportunity to benefit future work sessions.
+- **不要生成新的 SKILL.md 文件**——知识写到 error book 和 memory
+- **不要重复已有内容**——先 grep 检查是否已记录
+- **不要记录显而易见的事**——"pip install 能装包"不值得记
+- **不要记录一次性的事**——只记可复用的模式
