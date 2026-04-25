@@ -135,7 +135,7 @@ workflow-starter/
 ├── 启动官方claude.bat       # 带代理启动 Claude Code
 ├── docs/
 │   ├── architecture.md      # 核心架构、代码地图、命名约定、雷区
-│   └── remote_server.md     # 远端 GPU 服务器连接指南（脱敏版）
+│   └── remote_server.template.md  # 远端连接模板（首次用时复制为 remote_server.md 并填信息）
 ├── memory/                  # 项目记忆（跨会话持久化，18 篇 frontmatter MD）
 ├── .claude/                 # Claude Code 配置
 │   ├── settings.json        # Stop hook 注册
@@ -151,8 +151,20 @@ workflow-starter/
 | 主题 | 文件 | 说明 |
 |------|------|------|
 | 架构 & 代码地图 | [docs/architecture.md](docs/architecture.md) | vLLM-Omni 架构、代码地图、命名约定、雷区 |
-| 远端服务器 | [docs/remote_server.md](docs/remote_server.md) | SSH 连接、Slurm 申请、tmux 操作模板 |
+| 远端服务器 | [docs/remote_server.md](docs/remote_server.md) | SSH 连接、Slurm 申请、tmux 操作模板（首次由模板自动生成） |
 | Error Book | [.claude_errors/hunyuan_image3.md](.claude_errors/hunyuan_image3.md) | 踩坑记录，进入任何 phase 前先读 |
+
+## 远端实验自动初始化
+
+当需要 SSH 到远端服务器跑测试/实验时，先检查 `docs/remote_server.md` 是否存在：
+
+- **存在** → 直接按里面的连接信息操作
+- **不存在** → 自动从 `docs/remote_server.template.md` 复制一份到 `docs/remote_server.md`，然后**问用户**填以下信息：
+  - SSH 用户名、登录节点 IP、密码（或 SSH key 路径）
+  - 计算节点 hostname、Slurm 分区名
+  - 远端工作目录、docker 容器名、tmux session 名
+
+`docs/remote_server.md` 已在 `.gitignore` 里，填了密码也不会被 commit。
 
 ## 可用 Skills（`vllm-omni/.claude/skills/`）
 
