@@ -164,7 +164,9 @@ workflow-starter/
 | `add-tts-model` | 新增 TTS 模型 / 接 `serving_speech.py` / async chunk 流式 / 给 AR 热环加 CUDA graph | 目前无（HunyuanImage3 是 image，不是 audio）。**例外**：将来给 AR decode 加 CUDA graph 提速时可参考 Phase 5 |
 | `vllm-omni-npu-upgrade` | 把 GPU runner 的 omni 改动同步到 NPU runner / 升级 vllm-ascend 对齐 | 目前无（GPU 工作流，不碰 NPU）。**附带价值**：grep `Omni-new` 注释块可以快速定位 `gpu_*_model_runner.py` 里 vllm-omni 在 vllm 上加的改动 |
 
-**调用方式**：用 `Skill` 工具，`skill` 字段填名字（如 `add-diffusion-model`）。**不要**和 `CLAUDE.md` 里的 21 条硬规则、`memory/`、`.claude_errors/` 冲突——skill 是"怎么写代码 fit 进框架"，硬规则是"怎么不踩远端/容器/调试的坑"，两者互补。
+**调用方式**：用 `Skill` 工具，`skill` 字段填名字（如 `add-diffusion-model`）。**不要**和 `CLAUDE.md` 里的硬规则、`memory/`、`.claude_errors/` 冲突——skill 是"怎么写代码 fit 进框架"，硬规则是"怎么不踩远端/容器/调试的坑"，两者互补。
+
+**另外**：`claudeception` skill 负责数据飞轮自动积累——从会话提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分。调用 `/claudeception` 或在 stop-gate hook 提示时触发。
 
 ## 项目记忆（`memory/`）
 
@@ -198,10 +200,10 @@ workflow-starter/
 
 ## Error Book 格式
 
-任何新踩的坑追加到 `.claude_errors/hunyuan_image3.md`：
+任何新踩的坑按主题追加到 `.claude_errors/<topic>.md`（如 `git_and_rebase.md`、`docker_and_container.md`）：
 
 ```markdown
-## YYYY-MM-DD HH:MM — Phase N — <一句话标题>
+## YYYY-MM-DD HH:MM — <一句话标题>
 **症状**：<报错/不符合预期的具体表现>
 **根因**：<分析后的真正原因>
 **解法**：<怎么修的>
