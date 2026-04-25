@@ -16,3 +16,4 @@ secrets.*
 *.key
 askpass*.sh
 *.local.md
+docs/remote_server.md
