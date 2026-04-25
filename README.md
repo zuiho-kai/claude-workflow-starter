@@ -119,7 +119,7 @@ starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 
 ## 故障排查
 
-- **hook 不触发？** 检查 `.claude/settings.json` 是否在项目根；`bash -n .claude/hooks/stop-gate.sh` 验语法
+- **hook 不触发？** 检查 `.claude/settings.json` 是否在项目根；`bash -n .claude/hooks/stop-gate.sh` 验语法；`python -m json.tool .claude/settings.json` 验 JSON 格式
 - **远端连不上？** 读 `docs/remote_server.md` 顶部"首次使用"表，确认 placeholder 全填了
 - **API 报 `Invalid signature in thinking block`？** 打 `/clean-thinking`，自动修
 - **上下文快爆？** 打 `/lastwords` 或 `/遗言`，生成交接文档后开新会话
