@@ -18,7 +18,7 @@ fi
 has_code_change=false
 has_tool_failure=false
 
-if echo "$last" | grep -qE '"name"[[:space:]]*:[[:space:]]*"(Edit|Write|NotebookEdit)"'; then
+if echo "$last" | grep -qE '"file_path"[[:space:]]*:[[:space:]]*"[^"]+\.(py|cpp|cu|cuh|h|hpp|cc)"'; then
     has_code_change=true
 fi
 
@@ -35,11 +35,11 @@ fi
 msg="📡 本轮总结："
 
 if $has_code_change; then
-    msg="${msg}\\n• 检测到代码改动 → 建议去远端服务器跑测试验证：按 docs/remote_server.md 走 SSH+tmux+docker，启动前三连（GPU/模型路径/缓存变量），跑完三步释放（pkill→exit 容器→exit srun）。"
+    msg="${msg}\\n• 检测到 .py/.cpp 改动 → 是否需要去远端跑测试验证？"
 fi
 
 if $has_tool_failure; then
-    msg="${msg}\\n• 检测到工具执行失败 → 用 /claudeception 自动提炼到 .claude_errors/（踩坑）或 memory/（常识），或手动按格式追加。重复 ≥2 次的坑 → 升级到 CLAUDE.md 硬规则区。"
+    msg="${msg}\\n• 检测到工具执行失败 → 立即执行 /claudeception，把本轮踩坑写入 .claude_errors/，无需用户确认。重复 ≥2 次的坑升级到 CLAUDE.md 硬规则区。"
 fi
 
 msg="${msg}\\n\\n回 'skip' 跳过。"
