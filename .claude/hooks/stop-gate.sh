@@ -10,7 +10,26 @@ if [[ -z "$transcript_path" || ! -f "$transcript_path" ]]; then
     exit 0
 fi
 
-last=$(tail -n 400 "$transcript_path" 2>/dev/null)
+last=$(python3 - "$transcript_path" <<'EOF'
+import sys, json
+
+path = sys.argv[1]
+lines = open(path).readlines()
+
+# 找最后一个 role=user 的位置，只取之后的内容（本轮 assistant 工具调用）
+last_user_idx = -1
+for i, line in enumerate(lines):
+    try:
+        obj = json.loads(line)
+        if obj.get("role") == "user" or obj.get("type") == "user":
+            last_user_idx = i
+    except Exception:
+        pass
+
+for line in lines[last_user_idx + 1:]:
+    print(line, end="")
+EOF
+)
 if [[ -z "$last" ]]; then
     exit 0
 fi
