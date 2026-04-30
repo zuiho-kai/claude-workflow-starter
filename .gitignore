@@ -17,3 +17,9 @@ secrets.*
 askpass*.sh
 *.local.md
 docs/remote_server.md
+
+# 含真实凭证的远端 memory（首次启动 cc 会从对应 .template.md 复制并引导填）
+memory/remote/ssh_connection_pattern.md
+memory/remote/remote_test_env.md
+memory/remote/remote_0036_env.md
+.claude/settings.local.json
