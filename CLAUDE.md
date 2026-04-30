@@ -12,24 +12,24 @@
 ## ⚠️ 硬性规则（违反过多次，按场景分组）
 
 ### A. 远端 / 容器 / Slurm
-- **A1** 远端发命令后先短 sleep（≤5s）+ capture 确认脚本真启动（看到 `collected N items` / 程序日志），再长 sleep 等结果 → [user_prefs](memory/feedback/user_prefs.md)
+- **A1** 远端发命令后先短 sleep（≤5s）+ capture 确认脚本真启动（看到 `collected N items` / 程序日志），再长 sleep 等结果 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
 - **A2** 退 srun 前必须容器内 `pkill -9 -f vllm_omni`，否则占死 GPU → [srun_exit_kill_container_procs](memory/remote/srun_exit_kill_container_procs.md)
 - **A3** 容器内一切持久内容（模型、venv、缓存、代码）必须写宿主挂载路径，别写 `~/.cache` / `/tmp` / 容器层 → [no_container_ephemeral](memory/remote/no_container_ephemeral.md)
 - **A4** 进新节点先 `docker inspect <other_container>` 看挂载，别信文档别假设路径 → [remote_node_general](memory/remote/remote_node_general.md)
 - **A5** 香港机器直连 PyPI，不要用清华源 → [remote_is_hongkong](memory/remote/remote_is_hongkong.md)
 - **A6** tmux window 有前台进程时不能往该 window 发 shell 命令（send-keys 进了进程 stdin），从另一个 window 发
 - **A7** 跨节点执行命令用脚本文件，禁止嵌套引号（`ssh nodeA "docker exec $(...) ..."` 的 `$()` 在本地展开必错）
-- **A8** 进容器后必须 `unset TRANSFORMERS_CACHE`，空字符串 ≠ unset → [transformers_cache_gotcha](memory/remote/transformers_cache_gotcha.md)
+- **A8** 进容器后必须 `unset TRANSFORMERS_CACHE` 和 `HF_HUB_CACHE`，两个都覆盖 `HF_HOME`；空字符串 ≠ unset → [hf_cache_env_gotcha](memory/remote/hf_cache_env_gotcha.md)
 - **A9** 容器内跑 multiprocessing 前 `cd /tmp`，避免 spawn 子进程 chdir 到 Lustre 受限路径报 `PermissionError` → [docker_exec_cwd_workaround](memory/remote/docker_exec_cwd_workaround.md)
 - **A10** 释放资源三步走：容器内 pkill → exit docker exec → exit srun，最后 `squeue -u <user>` 确认空 → [srun_exit_kill_container_procs](memory/remote/srun_exit_kill_container_procs.md)
 
 ### B. 调试方法论
-- **B1** 调试阶段禁止 git commit-push-pull 循环；远端直接写 `/tmp/test_xxx.py` 试错；commit message 出现 "fix attempt N" 立刻停 → [feedback_remote_debug_strategy](memory/feedback/feedback_remote_debug_strategy.md)
-- **B2** 接入新模型前先做环境侦察：config JSON / 目录列表 / HF cache 结构 / 包版本 / 同类先例（GLM-Image / BAGEL），结果留痕 → [feedback_tokenizer_debug_retro](memory/feedback/feedback_tokenizer_debug_retro.md)
+- **B1** 调试阶段禁止 git commit-push-pull 循环；远端直接写 `/tmp/test_xxx.py` 试错；commit message 出现 "fix attempt N" 立刻停 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
+- **B2** 接入新模型前先做环境侦察：config JSON / 目录列表 / HF cache 结构 / 包版本 / 同类先例（GLM-Image / BAGEL），结果留痕 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
 - **B3** 奥卡姆剃刀：先用最少资源最简配置试（2 卡 TP=2 试，OOM 再加），硬编码资源要求必须有实测依据
-- **B4** 用户给出明确技术方案时直接执行，禁止"先试试不改看行不行"——用户比你更了解模型和硬件 → [feedback_follow_user_instruction](memory/feedback/feedback_follow_user_instruction.md)
-- **B5** 优先最简单直接的方案，禁止绕远路（venv 优先于 PYTHONPATH hack / pip 升级系统包） → [feedback_no_detours](memory/feedback/feedback_no_detours.md) + [feedback_use_venv](memory/feedback/feedback_use_venv.md)
-- **B6** 已知结论（error book / memory / 上轮调试结果）直接应用，禁止重新推导 → [user_prefs](memory/feedback/user_prefs.md)
+- **B4** 用户给出明确技术方案时直接执行，禁止"先试试不改看行不行"——用户比你更了解模型和硬件 → [execution_principles](memory/feedback/execution_principles.md)
+- **B5** 优先最简单直接的方案，禁止绕远路（venv 优先于 PYTHONPATH hack / pip 升级系统包） → [execution_principles](memory/feedback/execution_principles.md)
+- **B6** 已知结论（error book / memory / 上轮调试结果）直接应用，禁止重新推导 → [execution_principles](memory/feedback/execution_principles.md)
 - **B7** 测 HF 模型 baseline 前必先 `grep -E "demo|generate_image|prepare_model_inputs" $REPO/README.md` 找官方 API；禁止自己拍参数替代 `model.generate_image()` → [feedback_check_official_demo_first](memory/feedback/feedback_check_official_demo_first.md)
 
 ### C. CI / 测试
@@ -96,18 +96,11 @@ workflow-starter/
 
 ## 远端实验自动初始化
 
-含真实凭证的配置文件全部走「template + gitignore」模式——仓库里只有 `*.template.md`（占位符版本），实例文件已 `.gitignore`，cc 进新会话时检查实例是否存在，不存在就从 template 复制并问用户填。
+需要 SSH 到远端时，先检查 `docs/remote_server.md` 是否存在：
+- **存在** → 按里面信息操作
+- **不存在** → 从 `docs/remote_server.template.md` 复制一份，问用户填：SSH 用户名/IP/密码、计算节点 hostname、Slurm 分区、远端工作目录、docker 容器名、tmux session 名
 
-| Template（仓库） | 实例（gitignored） | 何时引导用户填 |
-|------------------|--------------------|----------------|
-| `docs/remote_server.template.md` | `docs/remote_server.md` | 第一次需要 SSH 到远端时 |
-| `memory/remote/ssh_connection_pattern.template.md` | `memory/remote/ssh_connection_pattern.md` | 第一次需要 ASKPASS 自动化 SSH 时 |
-| `memory/remote/remote_test_env.template.md` | `memory/remote/remote_test_env.md` | 第一次提到「主测试节点」时 |
-| `memory/remote/remote_0036_env.template.md` | `memory/remote/remote_<NODE_TAG>_env.md` | 进每个新计算节点时各填一份 |
-
-**cc 行为约定**：发现某个 template 在仓库里、但对应实例 `.md` 不存在时，主动 `cp` 一份并问用户：「这个文件需要填以下信息：…，要现在填吗？」。已存在则直接读。
-
-填好的实例文件不会被 commit（`.gitignore` 已覆盖），但本机持久保留，下次会话不会再问。
+`docs/remote_server.md` 已在 `.gitignore`，填密码不会被 commit。
 
 ## 包管理
 

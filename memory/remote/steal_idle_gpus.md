@@ -26,7 +26,7 @@ type: rule
        --ulimit memlock=-1 --ulimit stack=67108864 \
        -v /home:/home -v /scratch:/scratch \
        -w /home/<YOUR_GROUP>/<YOUR_USERNAME> \
-       taichangzhou/vllm-omni-ci:cuda-12.9 tail -f /dev/null
+       <YOUR_REGISTRY>/<YOUR_IMAGE>:<TAG> tail -f /dev/null
    ```
 4. 进容器 `nvidia-smi` 看全部 8 卡，挑空闲的 GPU
 5. 启动时用 `CUDA_VISIBLE_DEVICES=5,6,7` 指定（或 `--stage_0_devices=5,6,7,X`）
@@ -40,9 +40,9 @@ type: rule
 
 ## 反面教训
 
-这次在 0036 上：
+某次实战：
 - 申请 2 卡被分到 GPU 0/1（只剩 10GB 空闲，80B bf16 跑不动）
-- 卡 5/6/7 全空（每张 81GB），但我一开始没想过去用
-- 用户提醒："没4卡就申请2卡，然后进容器偷卡"
+- 卡 5/6/7 全空（每张 81GB），一开始没想到去用
+- 用户提醒："没 4 卡就申请 2 卡，然后进容器偷卡"
 
 **记住这个模式：申请保底卡数 → 进容器看全景 → 偷空闲卡**。

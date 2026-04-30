@@ -1,13 +1,9 @@
 ---
 name: claudeception
 description: |
-  数据飞轮自动积累系统：从工作会话中提炼踩坑记录和常识知识，自动写入 .claude_errors/（error book）
-  和 memory/（常识 book），并在单文件条目过多时自动按主题拆分归类。
-  触发条件：(1) /claudeception 命令回顾本次会话 (2) 踩坑后说"记到 error book" (3) 发现非显然知识
-  (4) 任何涉及调试、workaround、反复试错的任务完成后。
-  不生成新 skill，只积累 error book 和 memory。
-author: Claude Code
-version: 4.0.0
+  落盘项目经验和教训反思——把会话里的踩坑写到 .claude_errors/，常识写到 memory/。
+  触发：/claudeception 命令、用户说"记到 error book / 加到 memory"、调试 >10 分钟、反复试错的任务结束后。
+  不生成新 skill。展示 diff 给用户确认后再写。
 allowed-tools:
   - Read
   - Write
@@ -17,131 +13,52 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# Claudeception — 数据飞轮自动积累
+# Claudeception — 落盘项目经验 + 教训反思
 
-从工作会话中提炼知识，自动写入 error book 和 memory。不生成新 skill。
+踩坑 → `.claude_errors/<topic>.md` 追加；常识 → `memory/<subdir>/<topic>.md`。先 grep 重复，再展示 diff，确认后再写。
 
-## 输出目标
+## memory subdir 路由
 
-| 知识类型 | 写到哪 | 格式 |
-|---------|--------|------|
-| 踩坑（报错、走弯路、非预期行为） | `.claude_errors/<topic>.md` | Error Book 格式 |
-| 常识（通用模式、环境知识、协作偏好） | `memory/<subdir>/<topic>.md` | Memory frontmatter 格式 |
+| 关键字 | subdir |
+|--------|--------|
+| SSH / Slurm / docker / 容器 / Lustre / tmux / 远端环境变量 | `remote/` |
+| HF / HuggingFace / baseline / prompt / tokenizer | `hf/` |
+| CI / pytest / fixture / accuracy test / `tests/` | `ci/` |
+| 用户偏好 / 用户纠正 / 调试方法论 | `feedback/` |
+| 项目快照 / 不再活跃的模型考古 | `archive/<project>/` |
 
-## 触发条件
+不确定就问用户，禁止凭感觉新开 subdir。
 
-以下任一情况出现时，自动执行提炼：
+## 格式
 
-1. 用户调用 `/claudeception`
-2. 用户说"记到 error book"、"加到 memory"、"记住这个"
-3. 调试花了 >10 分钟才解决的问题
-4. 报错信息和真正根因不一致（误导性报错）
-5. 试了多种方案才找到正确的（反复试错）
-6. 发现项目/环境特有的非显然知识
-
-## 分类判断
-
-问自己两个问题：
-
-1. **这是一个"坑"吗？**（报错了、走弯路了、浪费时间了）→ 写 `.claude_errors/`
-2. **这是一个"知识"吗？**（环境配置、版本兼容、命名约定、协作偏好）→ 写 `memory/`
-
-如果两者都是（踩坑过程中发现了通用知识），两边都写。
-
-## Error Book 格式
-
-追加到 `.claude_errors/<topic>.md`：
-
+**Error book**（追加）：
 ```markdown
-## YYYY-MM-DD HH:MM — <一句话标题>
-**症状**：<报错/不符合预期的具体表现>
-**根因**：<分析后的真正原因>
-**解法**：<怎么修的>
-**对未来的提醒**：<下一次怎么避免>
+## YYYY-MM-DD — <标题>
+**症状**：… **根因**：… **解法**：… **对未来的提醒**：…
 ```
 
-`<topic>` 按主题归类（如 `git_and_rebase.md`、`docker_and_container.md`、`model_loading.md`）。
-
-## Memory 格式
-
-`memory/` 已按主题分子目录。新建/追加之前**必先选 subdir**，禁止直接落到 `memory/` 根目录（那只放 `MEMORY.md` 索引）：
-
-| 关键字命中 | subdir | 命名约定 |
-|-----------|--------|---------|
-| SSH / Slurm / docker / 容器 / Lustre / 节点 / tmux / 远端环境变量 | `memory/remote/` | 描述性名字（如 `transformers_cache_gotcha.md`、`ssh_windows_strategy.md`） |
-| HF / HuggingFace / baseline / prompt / cache / tokenizer | `memory/hf/` | `hf_<topic>.md` 或描述性 |
-| CI / pytest / fixture / smoke / accuracy test / `tests/` | `memory/ci/` | `ci_<topic>.md` |
-| 用户偏好 / 用户纠正 / 协作风格 / 你做错过的事 | `memory/feedback/` | `feedback_<topic>.md`（一次性会话总结放 `feedback/retros/`；`user_prefs.md` 是总表） |
-| 跨组件调试 / attention / version 兼容 / 数据桥接 | `memory/debug/` | 描述性名字 |
-| 项目快照 / 不再活跃的模型考古 | `memory/archive/<project>/` | 描述性名字 |
-
-如果不确定哪个 subdir 或要新开 subdir，**问用户**，不要凭感觉新建目录。
-
-文件格式：
-
+**Memory**：
 ```markdown
 ---
 name: <标题>
-description: <一句话摘要——要具体到能判断相关性>
+description: <一句话摘要，具体到能判断相关性>
 type: feedback | project | reference | rule
 ---
-
 <内容>
 
-**Why:** <为什么这条知识重要>
-**How to apply:** <什么场景下用、怎么用>
+**Why:** … **How to apply:** …
 ```
 
-type 分类：
-- `feedback`：协作偏好、被用户纠正过的具体场景、调试策略
-- `project`：项目特有的技术决策、配置、状态
-- `reference`：跨项目通用的技术知识、操作模板
-- `rule`：硬规则类（被 CLAUDE.md「⚠️ 硬性规则」段引用的那种，违反过多次需要每次会话先读）
+## 写完必做
 
-## 写入后必做
+1. `memory/<subdir>/_index.md` 加一行（钩子 + 链接）
+2. 新开 subdir 才动 `memory/MEMORY.md`，已有的不碰
+3. 同一坑 `.claude_errors/` 出现 ≥2 次 → 提醒升级到 `CLAUDE.md` 硬规则，附两次日期
+4. 单文件 >10 条或 >2000 字 → 按主题拆 `<file>_<subtopic>.md`，原文件留索引
 
-1. **更新 subdir 索引**：在 `memory/<subdir>/_index.md` 的表格里加一行（一句话钩子 + 链接），和已有条目同风格
-2. **顶层 MEMORY.md**：只在**整个 subdir 还不存在**（开新 subdir）时才动顶层；已有 subdir 不需要碰
-3. **CLAUDE.md 硬规则区**：只在内容应升级到「⚠️ 硬性规则」时才动 CLAUDE.md（一般要看到该规则在 `.claude_errors/` 出现 ≥2 次再升）
-4. **检查升级条件**：同一个坑在 `.claude_errors/` 里出现 ≥2 次时，提醒用户升级到 CLAUDE.md 硬规则区，提醒里说清楚是哪两次踩坑
+## 不要
 
-## 自动拆分归类
-
-当单个文件条目过多时自动拆分：
-
-### Error Book 拆分（`.claude_errors/` 单文件 >10 条）
-1. 读取文件所有 `## YYYY-MM-DD` 条目
-2. 按主题聚类（git 相关、docker 相关、模型加载相关、远端调试相关...）
-3. 拆成多个文件：`<原文件名>_<subtopic>.md`
-4. 原文件保留为索引，列出拆分后的文件链接
-
-### Memory 拆分（`memory/` 总文件数 >25 或单文件 >2000 字）
-1. 检查是否有多个主题混在一个文件里
-2. 按主题拆分成独立文件
-3. 更新 CLAUDE.md 索引表
-
-## 回顾模式（/claudeception）
-
-会话结束前调用时：
-
-1. 回顾本次会话的完整上下文
-2. 识别所有可提炼的知识点（踩坑 + 常识）
-3. 逐条分类并写入对应文件
-4. 检查是否需要拆分归类
-5. 报告：写了几条到哪些文件
-
-## 质量标准
-
-写入前确认：
-- [ ] 内容是非显然的（不是文档里直接能查到的）
-- [ ] 内容是已验证的（实际发生过，不是猜测）
-- [ ] 内容是可复用的（下次遇到同样情况能用上）
-- [ ] 没有包含敏感信息（密码、IP、用户名用 placeholder）
-- [ ] 格式符合 Error Book / Memory 模板
-
-## 不要做的事
-
-- **不要生成新的 SKILL.md 文件**——知识写到 error book 和 memory
-- **不要重复已有内容**——先 grep 检查是否已记录
-- **不要记录显而易见的事**——"pip install 能装包"不值得记
-- **不要记录一次性的事**——只记可复用的模式
+- 生成新 SKILL.md
+- 重复写已有内容
+- 记显然事实 / 一次性事件
+- 留密码 / IP / 用户名（用 placeholder）

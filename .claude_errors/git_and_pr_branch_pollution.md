@@ -29,7 +29,7 @@ done
 git diff --stat origin/main..HEAD   # 应该只动 4 个 PR 范围内的文件
 # Force-push 到 PR 分支
 git push fork feature/hunyuan-image3-ar-alignment:feature/hunyuan-t2t-sdpa-fa --force-with-lease
-git push <YOUR_GITHUB> feature/hunyuan-image3-ar-alignment:feature/hunyuan-t2t-sdpa-fa --force-with-lease
+git push <YOUR_REMOTE> feature/hunyuan-image3-ar-alignment:feature/hunyuan-t2t-sdpa-fa --force-with-lease
 ```
 
 cherry-pick 后所有 commit hash 变了：

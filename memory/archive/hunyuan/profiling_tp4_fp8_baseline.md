@@ -4,7 +4,7 @@ description: HunyuanImage3 在 vllm-omni tp4_fp8 配置下的 stage duration pro
 type: project
 ---
 
-测试时间：2026-04-27，节点 <COMPUTE_NODE>（H800 80GB × 8），NUM_STEPS=20，NUM_PROMPTS=2，1024×1024
+测试时间：2026-04-27，节点 `<NODE>`（H800 80GB × 8），NUM_STEPS=20，NUM_PROMPTS=2，1024×1024
 
 **tp4_fp8 结果：**
 - 端到端延迟均值：2.85s
