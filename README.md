@@ -66,7 +66,7 @@ cp docs/remote_server.template.md docs/remote_server.md
 **额外的自动化（skills/ 提供）**：
 
 - `claudeception` — 数据飞轮核心：从会话自动提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分
-- `reflect-system` — 自动从对话提取你的偏好/纠正 → 改进相关 skill
+- `reflect-system` — Stop hook 后台从对话提取你的偏好/纠正写到 pending review（不会自动应用，因为后台进程没法跟你交互）；打 `/reflect-review` 让 Claude 列出 pending、跟你讨论 diff、确认后才应用到对应 skill
 - `clean-thinking` — 遇到 `Invalid signature in thinking block` API 报错时自动修
 
 **会话快爆时**：打 `/lastwords` 或 `/遗言`，自动生成交接文档。

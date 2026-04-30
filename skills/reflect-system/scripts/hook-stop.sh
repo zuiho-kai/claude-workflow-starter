@@ -59,7 +59,10 @@ log "Transcript path: $TRANSCRIPT_PATH"
     export TRANSCRIPT_PATH="$TRANSCRIPT_PATH"
     export AUTO_REFLECTED="true"
 
-    python3 "$SKILL_DIR/scripts/reflect.py" >> "$LOG_FILE" 2>&1
+    # --non-interactive: write pending-review.json and exit; no input() calls.
+    # Background hook context has no TTY, so the old default mode would hit EOFError
+    # in present_review() and silently fail. Use /reflect-review to apply pending.
+    python3 "$SKILL_DIR/scripts/reflect.py" --non-interactive >> "$LOG_FILE" 2>&1
     REFLECT_EXIT=$?
 
     if [ $REFLECT_EXIT -eq 0 ]; then
