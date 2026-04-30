@@ -26,7 +26,7 @@ allowed-tools:
 | 知识类型 | 写到哪 | 格式 |
 |---------|--------|------|
 | 踩坑（报错、走弯路、非预期行为） | `.claude_errors/<topic>.md` | Error Book 格式 |
-| 常识（通用模式、环境知识、协作偏好） | `memory/<topic>.md` | Memory frontmatter 格式 |
+| 常识（通用模式、环境知识、协作偏好） | `memory/<subdir>/<topic>.md` | Memory frontmatter 格式 |
 
 ## 触发条件
 
@@ -64,13 +64,26 @@ allowed-tools:
 
 ## Memory 格式
 
-新建或追加到 `memory/<topic>.md`：
+`memory/` 已按主题分子目录。新建/追加之前**必先选 subdir**，禁止直接落到 `memory/` 根目录（那只放 `MEMORY.md` 索引）：
+
+| 关键字命中 | subdir | 命名约定 |
+|-----------|--------|---------|
+| SSH / Slurm / docker / 容器 / Lustre / 节点 / tmux / 远端环境变量 | `memory/remote/` | 描述性名字（如 `transformers_cache_gotcha.md`、`ssh_windows_strategy.md`） |
+| HF / HuggingFace / baseline / prompt / cache / tokenizer | `memory/hf/` | `hf_<topic>.md` 或描述性 |
+| CI / pytest / fixture / smoke / accuracy test / `tests/` | `memory/ci/` | `ci_<topic>.md` |
+| 用户偏好 / 用户纠正 / 协作风格 / 你做错过的事 | `memory/feedback/` | `feedback_<topic>.md`（一次性会话总结放 `feedback/retros/`；`user_prefs.md` 是总表） |
+| 跨组件调试 / attention / version 兼容 / 数据桥接 | `memory/debug/` | 描述性名字 |
+| 项目快照 / 不再活跃的模型考古 | `memory/archive/<project>/` | 描述性名字 |
+
+如果不确定哪个 subdir 或要新开 subdir，**问用户**，不要凭感觉新建目录。
+
+文件格式：
 
 ```markdown
 ---
 name: <标题>
 description: <一句话摘要——要具体到能判断相关性>
-type: feedback | project | reference
+type: feedback | project | reference | rule
 ---
 
 <内容>
@@ -80,14 +93,17 @@ type: feedback | project | reference
 ```
 
 type 分类：
-- `feedback`：协作偏好、调试策略、工作流改进
+- `feedback`：协作偏好、被用户纠正过的具体场景、调试策略
 - `project`：项目特有的技术决策、配置、状态
-- `reference`：跨项目通用的技术知识
+- `reference`：跨项目通用的技术知识、操作模板
+- `rule`：硬规则类（被 CLAUDE.md「⚠️ 硬性规则」段引用的那种，违反过多次需要每次会话先读）
 
 ## 写入后必做
 
-1. **更新 CLAUDE.md 索引**：如果新建了 memory 文件，在 CLAUDE.md 的"项目记忆"表里加一行
-2. **检查升级条件**：如果同一个坑在 `.claude_errors/` 里出现 ≥2 次，提醒用户升级到 CLAUDE.md 硬规则区
+1. **更新 subdir 索引**：在 `memory/<subdir>/_index.md` 的表格里加一行（一句话钩子 + 链接），和已有条目同风格
+2. **顶层 MEMORY.md**：只在**整个 subdir 还不存在**（开新 subdir）时才动顶层；已有 subdir 不需要碰
+3. **CLAUDE.md 硬规则区**：只在内容应升级到「⚠️ 硬性规则」时才动 CLAUDE.md（一般要看到该规则在 `.claude_errors/` 出现 ≥2 次再升）
+4. **检查升级条件**：同一个坑在 `.claude_errors/` 里出现 ≥2 次时，提醒用户升级到 CLAUDE.md 硬规则区，提醒里说清楚是哪两次踩坑
 
 ## 自动拆分归类
 
