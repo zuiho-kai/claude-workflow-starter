@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ssh *)",
+      "WebFetch(domain:github.com)",
+      "Bash(cat)",
+      "Bash(scp -P 31230 /tmp/dump_hf_inputs.py root@47.79.124.13:/tmp/dump_hf_inputs.py)",
+      "Read(//d/vllm-omni/hunyuan3.0_ins/assets/demo_instruct_imgs//**)",
+      "Read(//d/vllm-omni/hunyuan3.0_ins/**)",
+      "Bash(cp D:/workflow-starter-public/.claude/hooks/stop-gate.sh D:/vllm-omni/workflow-starter/.claude/hooks/stop-gate.sh)",
+      "Bash(cp D:/workflow-starter-public/README.md D:/vllm-omni/workflow-starter/README.md)",
+      "Bash(cp D:/workflow-starter-public/skills/reflect-system/scripts/reflect.py D:/vllm-omni/workflow-starter/skills/reflect-system/scripts/reflect.py)",
+      "Bash(cp D:/workflow-starter-public/skills/reflect-system/scripts/hook-stop.sh D:/vllm-omni/workflow-starter/skills/reflect-system/scripts/hook-stop.sh)",
+      "Bash(cp D:/workflow-starter-public/.claude/commands/reflect-review.md D:/vllm-omni/workflow-starter/.claude/commands/reflect-review.md)",
+      "Read(//d/vllm-omni/scripts/**)",
+      "Read(//d/vllm-omni/scripts/bench/**)",
+      "Read(//d/vllm-omni/scripts/profiling/**)",
+      "Bash(gh pr *)",
+      "Bash(gh auth *)",
+      "Bash(curl -sSI https://api.github.com)",
+      "Bash(curl -sI https://api.github.com/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" https://api.github.com)",
+      "Bash(python -c \"import ijson\")",
+      "WebFetch(domain:patch-diff.githubusercontent.com)"
+    ]
+  }
+}

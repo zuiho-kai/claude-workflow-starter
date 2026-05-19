@@ -58,7 +58,7 @@ if $has_code_change; then
 fi
 
 if $has_tool_failure; then
-    msg="${msg}\\n• 检测到工具执行失败 → 立即执行 /claudeception，把本轮踩坑写入 .claude_errors/，无需用户确认。重复 ≥2 次的坑升级到 CLAUDE.md 硬规则区。"
+    msg="${msg}\\n• 检测到工具执行失败 → /claudeception 落盘项目经验和教训反思（diff 给用户确认后再写）。"
 fi
 
 msg="${msg}\\n\\n回 'skip' 跳过。"

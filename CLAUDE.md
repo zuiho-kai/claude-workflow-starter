@@ -1,223 +1,119 @@
 # vLLM-Omni × HunyuanImage-3.0-Instruct 工作目录
 
-## CI / dummy guard verification rule
+本文件是**硬卡点规则手册**：宪法 + 一句话规则 + 链接。rationale / incident 详情全在 `memory/` 和 `.claude_errors/`，命中场景再点链接。
 
-When adding or changing a CI test, dummy guard, smoke test, or PR-level watch test, `compileall` and `git diff --check` are not enough. The newly added or changed test function must be executed at least once.
-
-If local pytest cannot start because dependencies such as `vllm` are missing, do not stop at syntax checks. Use an existing venv, the remote/container CI-like environment, or a minimal script that executes the same core test path. For dummy tests that use `object.__new__`, verify runtime behavior and do not assume attributes are writable; check for read-only properties and monkeypatch/stub them at the class level when needed.
-
-If this cannot be executed, state the blocker explicitly and do not claim the guard is verified.
-
-## ⚠️ 硬性规则（违反过多次，每次会话开头先读）
-
-1. **远端发命令后，先短 sleep（≤5s）+ capture 确认脚本真启动了，才能长 sleep 等结果。**
-   - 判据：capture 输出必须包含 pytest 的 `collected N items` / 明确的程序日志 / 明确的错误信息。光看到 shell 回显不算。
-   - 违反过 2 次（2026-04-21），详见 `memory/user_prefs.md`。
-
-2. **退 srun shell 前必须在容器里 `pkill -9 -f vllm_omni`。**
-   - Slurm 和 docker 不通信，srun exit 不会杀容器内进程，漏做就占死 GPU + 同事投诉。
-   - 详见 `memory/srun_exit_kill_container_procs.md`。
-
-3. **容器内一切持久内容（模型、venv、缓存、代码）必须写到挂载的 Lustre 路径。**
-   - 别写 `~/.cache` / `/tmp` / 容器层。HF 模型 `export HF_HOME=/home/models`。
-   - 详见 `memory/no_container_ephemeral.md`。
-
-4. **进新节点先看别人容器怎么挂，不要假设路径。**
-   - `docker inspect <other_container>` 最权威，别信文档。
-   - 详见 `memory/remote_node_general.md`。
-
-5. **香港机器直连 PyPI，不要用清华源。**
-   - 详见 `memory/remote_is_hongkong.md`。
-
-6. **做"团队同款 CI"类需求，先打开 `tests/` 里现有文件看一眼。**
-   - 别基于幻觉讨论方案。详见 `memory/always_inspect_existing_tests_first.md`。
-
-7. **国策**：改 `pipeline_registry.py` 而不是 YAML；改 YAML 为 CLI；不引入新 JSON/YAML 启动配置文件。
-
-8. **调试阶段禁止用 git commit-push-pull 循环。**
-   - 调试 = 在远端直接写 `/tmp/test_xxx.py` 或 Python one-liner 快速试错。
-   - 确认方案可行后，回本地写正式代码，**一次** commit-push-pull 部署。
-   - 判据：如果你的 commit message 是 "fix attempt N"，说明你在用部署流程做调试，**立刻停下来换策略**。
-   - 违反过 1 次（2026-04-21 tokenizer 修复 6 轮 git 循环，烧了一天 + $300），详见 `memory/feedback_remote_debug_strategy.md`。
-
-9. **接入新模型/新组件前，必须先做环境侦察，禁止直接写代码。**
-   - 一次 SSH 收集所有信息：config JSON 内容、目录文件列表、HF cache 结构（refs/ 是否存在）、关键包版本。
-   - 读目标代码路径：从调用入口追到实际加载逻辑，看清楚会调什么 API。
-   - 看同类模型怎么做的（GLM-Image / BAGEL 等先例）。
-   - **侦察结果写到 tmux capture 或临时文件里留痕，再决定方案。**
-   - 违反过 1 次（2026-04-21 没看 tokenizer_config.json 就写 AutoTokenizer 代码），详见 `memory/feedback_tokenizer_debug_retro.md`。
-
-10. **tmux window 有前台进程时，不能往该 window 发 shell 命令。**
-    - `python ... | tee` 占住 shell，send-keys 发的文本进了进程 stdin，不会被 shell 执行。
-    - 测试 API / 跑脚本必须从**另一个 tmux window** 发。
-    - 违反过 1 次（2026-04-21 往 serve 前台进程发 curl）。
-
-11. **跨节点执行命令用脚本文件，禁止嵌套引号。**
-    - `ssh nodeA "docker exec $(docker ps -q) ..."` 的 `$()` 会在本地展开 → 必错。
-    - 正确做法：写脚本到共享文件系统（Lustre），然后 `ssh nodeA bash /shared/path/script.sh`。
-    - 违反过 1 次（2026-04-21 docker exec 引号嵌套连续失败 3 次）。
-
-12. **奥卡姆剃刀：先用最少资源/最简配置试，不够再加。**
-    - 不要基于未验证的假设分配资源（"80B 模型肯定要 4 卡"）。
-    - 先试最小配置（2 卡 TP=2），OOM 了再加卡，不要反过来。
-    - 写 fixture / 配置时，硬编码的资源要求必须有实测依据，不能靠猜。
-    - 违反过 1 次（2026-04-21 GEBench fixture 硬编码 4 卡，从未验证 2 卡是否够用，导致被 GPU 可用性卡住）。
-
-13. **用户给出明确技术方案时，直接执行，禁止"先试试不改看行不行"。**
-    - 用户比你更了解模型和硬件约束。用户说减层就减层，说 TP=2 就 TP=2。
-    - 违反过 1 次（2026-04-21 用户说 TP=2+减层，我先试不减层 → OOM，浪费一轮远端调试），详见 `memory/feedback_follow_user_instruction.md`。
-
-13. **优先最简单直接的方案，禁止绕远路。**
-    - 现有环境有 venv 就 `source .venv/bin/activate`，不要 PYTHONPATH hack / pip install 升级系统包 / 加别名 patch。
-    - 先检查现有环境是否已有需要的东西，有就直接用。
-    - 违反过多次（2026-04-15 ~ 2026-04-16），详见 `memory/feedback_no_detours.md` + `memory/feedback_use_venv.md`。
-
-14. **已知结论直接应用，禁止重新推导。**
-    - 之前对话已经得出的结论（error book、memory、上一轮调试结果），直接用，不要重新验证。
-    - 优先行动，减少分析循环。
-    - 违反过至少 1 次（用户原话："为什么耗时那么久才分析出这种最简单的东西，这个之前不是已经发现过了么"），详见 `memory/user_prefs.md`。
-
-15. **进容器后必须 `unset TRANSFORMERS_CACHE`，空字符串不行。**
-    - 很多 Docker 镜像默认设了 `TRANSFORMERS_CACHE=/models/huggingface/transformers`，它会**覆盖** `HF_HOME`。
-    - `TRANSFORMERS_CACHE=`（空字符串）≠ `unset`：空字符串仍被 `os.environ.get()` 返回，传给 `hf_hub_download` 后行为不可预测。
-    - 进容器后先 `env | grep -i cache` 检查。
-    - 违反过 1 次（2026-04-22 GEBench DiffusionWorker 找不到模型），详见 `memory/transformers_cache_gotcha.md`。
-
-16. **写 accuracy test 时，所有 CLI 参数必须从 fixture 透传到 benchmark 主函数。**
-    - 特别是 `--samples-per-type` / `--max-samples` 这类控制数据量的参数。
-    - 漏传 = 跑全量数据集，smoke test 变成几小时的完整 benchmark。
-    - 写完后 diff 对比同类测试（如 Qwen-Image 的 gebench test）确认参数齐全。
-    - 违反过 1 次（2026-04-22 GEBench 跑了 15+ 分钟才发现没传 --samples-per-type）。
-
-17. **离线环境（`HF_HUB_OFFLINE=1`）跑 accuracy test 前，确认所有模型都已下载。**
-    - accuracy test 通常涉及 generate 模型 + judge 模型，两个都要在 HF cache 里。
-    - checklist：`ls $HF_HOME/hub/ | grep models--` 确认 generate model、judge model、dataset 三项齐全。
-    - 违反过 1 次（2026-04-22 generate 成功但 judge 模型没下载，evaluate 阶段直接失败）。
-
-18. **跑任何远端脚本/accuracy test 前，必须过"启动前三连"。**
-    - (1) GPU 空闲：`nvidia-smi --query-gpu=index,memory.used,memory.free --format=csv,noheader`
-    - (2) 模型路径存在：`find $HF_HOME/hub -maxdepth 3 -name "snapshots" -type d`
-    - (3) 缓存变量正确：`env | grep -iE "cache|hf_home|offline"`
-    - kill 进程后必须 `sleep 5 + nvidia-smi` 确认显存归零再重启；有残留时 judge server 用 `gpu_memory_utilization=0.5`。
-    - 违反过 1 次（2026-04-23 没做侦察直接跑，浪费 4 小时），详见 `.claude_errors/hunyuan_image3.md`。
-
-19. **容器内跑 multiprocessing 命令前，先 `cd /tmp`。**
-    - Python multiprocessing spawn 模式子进程会 `os.chdir()` 到父进程 cwd。如果 cwd 是 Lustre 权限受限目录（如 `/scratch/...`），子进程报 `PermissionError: [Errno 13]`。
-    - 违反过 1 次（2026-04-23 vllm-omni diffusion executor 4 次 worker 全崩，查了 3 轮才发现是 cwd 权限问题）。
-
-20. **释放远程资源必须三步走，缺一不可。**
-    - (1) 容器内：`pkill -9 -f python && pkill -9 -f vllm_omni` 杀 GPU 进程
-    - (2) 容器内：`exit` 退出 docker exec session
-    - (3) 计算节点：`exit` 退出 srun shell，释放 Slurm job
-    - 最后 `squeue -u <user>` 确认 job 列表为空。
-    - 违反过 1 次（2026-04-23 用户说"释放资源"，只做了 pkill 没退容器和 srun，job 一直占着节点）。
-
-21. **git commit 默认加 DCO sign-off。**
-    - 所有 commit 必须带 `--signoff`（即 `-s`），生成 `Signed-off-by: Name <email>` 行。
-    - vllm-omni 上游要求 DCO，缺 sign-off 的 commit 会被 CI 拒绝。
-
-22. **开发在 git worktree 里做，主仓库工作区保持干净。**
-    - 每个 PR / 大功能 / 实验探索 → 一个 worktree，命名 `wt-<purpose>`。
-    - 主仓库目录只作 hub，不直接写代码。
-    - 起 worktree：`git worktree add ../wt-feature-xxx feature/xxx`；完事 `git worktree remove ../wt-feature-xxx`。
-    - 违反过 1 次：在主分支多 PR 上下文混跑导致 squash 时旧分支夹带货洗不干净，烧了一天。
+**怎么用**：会话开头扫宪法 P1-P7 建框架；写代码前必须读 [code_taste](memory/feedback/code_taste.md)；场景命中下沉到对应硬规则；踩新坑追加到 `.claude_errors/<topic>.md`（格式见 [claudeception skill](skills/claudeception/SKILL.md)），同坑 ≥2 次升级为硬规则时**必须标 P1-P7 派生**。写新 memory / error 前先查 [memory/MEMORY.md](memory/MEMORY.md)，能套现有主题就追加章节，**禁建小文件**（新建需三条件齐：现有主题无法容纳 + 预期复用 ≥2 次 + 通用主题而非具体 incident）。
 
 ---
 
-## 目录布局
+## 🏛️ 宪法（7 条原则）
 
-```
-workflow-starter/
-├── CLAUDE.md                # 本文件（22 条硬规则 + 索引）
-├── README.md                # 怎么用：4 步 setup + 飞轮机制说明
-├── .gitignore               # 排除密码/凭证/临时文件
-├── 拉起claude.bat           # 快速启动 Claude Code（跳过权限确认）
-├── 启动官方claude.bat       # 带代理启动 Claude Code
-├── docs/
-│   ├── architecture.md      # 核心架构、代码地图、命名约定、雷区
-│   └── remote_server.template.md  # 远端连接模板（首次用时复制为 remote_server.md 并填信息）
-├── memory/                  # 项目记忆（跨会话持久化，18 篇 frontmatter MD）
-├── .claude/                 # Claude Code 配置
-│   ├── settings.json        # Stop hook 注册
-│   ├── commands/            # lastwords.md + 遗言.md（会话交接 slash command）
-│   └── hooks/
-│       └── stop-gate.sh     # 数据飞轮门禁 hook
-├── .claude_errors/          # Error book（踩坑记录，6 篇）
-└── skills/                  # Custom skills（claudeception / clean-thinking / reflect-system）
-```
+> A-F 硬规则是这 7 条在具体场景的派生。规则未覆盖的新场景先回这层推。
 
-## 快速索引
+- **P1 证据先行**：未实测验证不算证据，禁据此下结论；algorithm 决策必先 grep upstream → B2 / B7 / B8 / B9 / B14 / B18 / B19 / **B30** / **B32** / F1
+- **P2 简单直接，意图先行**：同等需求选最简方案；用户给明确方案直接执行；极简指令先还原意图 → B3 / B4 / B5 / B6 / F2 / F6
+- **P3 完整链路而非单点**：bug 先完整 pipeline 静态 trace；style/bias 先 diff 代码非 dump 数值；framework hack 和 algorithm fix 都能解释时选 algorithm → B12 / B13 / B20 / **B31**
+- **P4 单变量隔离归因**：多处改动同时跑通后必做最小消除实验逐处 revert；"看到 diff" ≠ "diff 就是 root cause"；同时持有 ≥2 个怀疑禁止动手 fix，先静态二分 → B14 / B15 / B16 / **B32**
+- **P5 测试要打到真实路径**：e2e 默认优于 mock；对齐测试 reference 必从模型 snapshot 加载不能用自己副本；input 对齐 ≠ output 对齐 → B17 / C2 / C3 / C5 / **C8** / [plan_and_validation](memory/feedback/plan_and_validation.md) / [pr_workflow](memory/feedback/pr_workflow.md)
+- **P6 拒绝静默降级**：禁 `dict.get or` / `hasattr` / `generator=None` 类 silent fallback；schema 报错先问"约束对吗"再改；hack 必 `logger.warning` 留痕 → F7 / [painterly_silent_bugs](.claude_errors/painterly_silent_bugs.md)
+- **P7 范围自律**：小 PR `git show` 整段读 + 审悬挂引用；测 PR 先看首 commit message；compound dep 错逐个 fix forward；调试期"顺手优化"延后独立 PR → A6 / A7 / D3 / F3 / **F8** / [execution_principles](memory/feedback/execution_principles.md)
+- **P8 代码品味**：写代码前先读 code_taste；人工 reviewer 先看命名/归属/复用/测试位置/注释/API 面/diff 气味，能跑不等于可 review → **C8** / **F10** / [code_taste](memory/feedback/code_taste.md) / [reviewer_lens_audit](memory/feedback/reviewer_lens_audit.md)
 
-| 主题 | 文件 | 说明 |
-|------|------|------|
-| 架构 & 代码地图 | [docs/architecture.md](docs/architecture.md) | vLLM-Omni 架构、代码地图、命名约定、雷区 |
-| 远端服务器 | [docs/remote_server.md](docs/remote_server.md) | SSH 连接、Slurm 申请、tmux 操作模板（首次由模板自动生成） |
-| Error Book | [.claude_errors/hunyuan_image3.md](.claude_errors/hunyuan_image3.md) | 踩坑记录，进入任何 phase 前先读 |
+---
 
-## 远端实验自动初始化
+## ⚠️ 硬性规则（按场景分组）
 
-当需要 SSH 到远端服务器跑测试/实验时，先检查 `docs/remote_server.md` 是否存在：
+### A. 远端 / 容器 / Slurm
+- **A1** 远端发命令后先短 sleep（≤5s）+ capture 确认脚本真启动（`collected N items` / 程序日志），再长 sleep 等结果 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
+- **A2** 退 srun 前必须容器内 `pkill -9 -f vllm_omni`，否则占死 GPU → [srun_lifecycle](memory/remote/srun_lifecycle.md)
+- **A3** 容器内一切持久内容（模型/venv/缓存/代码）必须写宿主挂载路径，别写 `~/.cache` / `/tmp` / 容器层 → [container_setup](memory/remote/container_setup.md)
+- **A4** 进新节点先 `docker inspect <other_container>` 看挂载，别信文档别假设路径 → [node_basics](memory/remote/node_basics.md)
+- **A5** 香港机器直连 PyPI，不要用清华源 → [node_basics](memory/remote/node_basics.md)
+- **A6** tmux window 有前台进程时不能往该 window 发 shell 命令（send-keys 进了进程 stdin），从另一个 window 发
+- **A7** 跨节点/PowerShell→SSH 执行复杂命令用脚本文件，禁止嵌套引号；远端脚本落盘后必须 `wc -c` + `sed -n '1,40p'` + `bash -n` 查空文件/BOM/本地变量展开（`ssh nodeA "docker exec $(...) ..."` 的 `$()` 在本地展开必错）→ [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
+- **A8** 进容器后必须 `unset TRANSFORMERS_CACHE` 和 `HF_HUB_CACHE`，两个都覆盖 `HF_HOME`；空字符串 ≠ unset → [container_setup](memory/remote/container_setup.md)
+- **A9** 容器内跑 multiprocessing 前 `cd /tmp`，避免 spawn 子进程 chdir 到 Lustre 报 `PermissionError` → [container_setup](memory/remote/container_setup.md)
+- **A10** 释放资源三步：容器内 pkill → exit docker exec → exit srun → `squeue -u <user>` 确认空 → [srun_lifecycle](memory/remote/srun_lifecycle.md)
+- **A11** 远端跑任何 HF 加载（`Omni()` / `from_pretrained()` / `LLM()`）前必先 `export HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1`；只设 `HF_HOME` **不够**（hub 仍校验 revision / 补 shard），160GB 模型一启动就把网络+磁盘打爆 → SSH `kex_exchange_identification` 断开。或传本地绝对 snapshot 路径替代 repo id → [hf_offline_mandatory](memory/remote/hf_offline_mandatory.md)
+- **A12** 远端验证 / GPU smoke / 远端 pytest 前必须先读 `docs/remote_server.md`；节点 B 以 `/home/wzr` 为稳定锚点，每次默认新建本次专用 worktree + `.venv`（旧 `wt-*`/venv 会被清理，禁写死复用），但新终端接手已有远端任务时先整理 head/worktree/venv/tmux/out_dir 5 行 runbook 并复用已知目录，不要全盘 rediscover；本地 commit+push 后远端 git fetch/checkout 同步，venv 健康检查通过再测；旧 PR/历史分支先做 base commit import/init smoke，base 起不来只算环境/ABI blocker；禁 `scp` / `git diff | ssh apply`。但纯 lint / 小范围静态修复已在本地通过时，不要默认上远端；远端只用于本地缺依赖、GPU/e2e、环境相关或用户明确要求 → [.claude_errors/remote_and_ssh.md §2026-05-19](.claude_errors/remote_and_ssh.md)
 
-- **存在** → 直接按里面的连接信息操作
-- **不存在** → 自动从 `docs/remote_server.template.md` 复制一份到 `docs/remote_server.md`，然后**问用户**填以下信息：
-  - SSH 用户名、登录节点 IP、密码（或 SSH key 路径）
-  - 计算节点 hostname、Slurm 分区名
-  - 远端工作目录、docker 容器名、tmux session 名
+### B. 调试方法论
+- **B1** 调试阶段禁 git commit-push-pull 循环；远端直接写 `/tmp/test_xxx.py` 试错；commit message 出现 "fix attempt N" 立刻停 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
+- **B2** 接新模型前先做环境侦察（config JSON / 目录列表 / HF cache / 包版本 / 同类先例 GLM-Image・BAGEL），结果留痕 → [remote_debug_strategy](memory/feedback/remote_debug_strategy.md)
+- **B3** 奥卡姆剃刀：最少资源最简配置先试（2 卡 TP=2，OOM 再加）；硬编码资源要求必须有实测依据
+- **B4** 用户给明确技术方案时直接执行，禁止"先试试不改看行不行" → [execution_principles](memory/feedback/execution_principles.md)
+- **B5** 优先最简单直接的方案，禁绕远路（venv 优于 PYTHONPATH hack / pip 升级系统包） → [execution_principles](memory/feedback/execution_principles.md)
+- **B6** 已知结论（error book / memory / 上轮调试）直接应用，禁重新推导 → [execution_principles](memory/feedback/execution_principles.md)
+- **B7** 测 HF baseline 前必先 grep 官方 README 找 `generate_image()` 类 API，禁自己拍参数替代 → [hf_alignment_pitfalls](memory/hf/hf_alignment_pitfalls.md)
+- **B8** 怀疑某 op 是 bug 前必先 grep 日志确认它真被调用（硬编码 backend 可能让你 debug 的 kernel 根本没跑） → [painterly_debug_methodology_misses](.claude_errors/painterly_debug_methodology_misses.md)
+- **B9** 标某统计指标"异常"前必须用 HF 实现做 baseline 对照；单边 dump 不算证据（模型设计可能反直觉：attention sink / outlier channel / post-LN 信息洗除） → [painterly_debug_methodology_misses](.claude_errors/painterly_debug_methodology_misses.md)
+- **B10** swap"等价"实现前先列接口 diff 矩阵（`__init__` / forward 签名 / config 字段 / kwarg 名 / return type），写 adapter shim 一处 reconcile 再 sed → [painterly_debug_methodology_misses](.claude_errors/painterly_debug_methodology_misses.md)
+- **B11** 远端 patch session 开头和切大假设前必须 `grep -rn "BUG-PROBE"` 全量审计；探针 vs 实验 patch 用不同 marker；实验性数值改动 env-var gate 不改默认 → [painterly_debug_methodology_misses](.claude_errors/painterly_debug_methodology_misses.md)
+- **B12** [P3 派生] 风格/质量 bias bug 第一步是静态代码 diff 不是数值 dump（指纹在 dispatch 决策 / RoPE phase / activation 翻号，不在 mean/std） → [style_bias_debug_methodology](memory/feedback/style_bias_debug_methodology.md)
+- **B13** [P3 派生] repo 同时有 AR 版 + DiT 版（`model_executor/` vs `diffusion/`）实现 → **先 diff 两边**（AR 那边修过的 bug 高概率 DiT 漏同步） → [style_bias_debug_methodology](memory/feedback/style_bias_debug_methodology.md)
+- **B14** [P1 派生] prior session "X 已证伪"只对具体 hypothesis 成立，不代表组件清白；"几个团队同 bug" ≠ infra 回归（可能都漏了同款 fix） → [painterly_root_cause](.claude_errors/painterly_root_cause.md)
+- **B15** [P4 派生] 多处同时改后跑通**不能独立归因**——N 处只有 1 处真起作用，其它是 cargo cult；声明 root cause 前必做最小消除实验逐处 revert/toggle → [style_bias_debug_methodology](memory/feedback/style_bias_debug_methodology.md)
+- **B16** [P4 派生] 静态 diff 找到差异 → 假设 → 隔离实验 → 才确认机制；"看到 diff" ≠ "diff 就是 root cause"；尤其 class 替换先看继承结构 / wrapper hooks 再看实现细节 → [style_bias_debug_methodology](memory/feedback/style_bias_debug_methodology.md)
+- **B17** [P5 派生] 跨实现 PSNR 对比前必须 9 项 fair-comparison checklist 显式对齐（prompt / 图字节 / seed / **temperature=0** / **top_k=1** / guidance / bot_task / steps / 分辨率）；sampling mode PSNR floor 5-15 dB，未切 greedy 不许声称"DiT 有问题" → [style_bias_debug_methodology](memory/feedback/style_bias_debug_methodology.md)
+- **B18** [P1 派生] 用户问"为什么不 X" / 给工程方案前必先 grep / 看 yaml / 看架构核对 X 机制是否真实存在；"工作量 N 天"凭空想象必被怼 → [painterly_psnr_pitfalls](.claude_errors/painterly_psnr_pitfalls.md)
+- **B19** [P5 派生] cross-impl PSNR 验证前必先测 reference 自身 reproducibility（同 seed 同 greedy 跑两次比 PSNR）；HF a vs HF b 实测 10-12 dB，cross-impl 同水平不算 bug → [painterly_psnr_pitfalls](.claude_errors/painterly_psnr_pitfalls.md)
+- **B20** [P3 派生] 背景生图 / 多图尺寸异常按 prompt -> AR -> bridge -> DiT -> config/token 逐层 trace，别先扣单个显眼函数 → [size_debug](memory/feedback/size_debug.md)
+- **B21** [P3 派生] 用户报"路径 A 一直 X，路径 B 一直 Y" = systematic 跨路径偏差，**禁用 CUDA/MoE non-determinism 解释**（那是 stochastic）；AR 对齐三件套：prompt_token_ids 字节同 / multi_modal_data 字节同（**PIL RGBA→RGB silent bug**：黑底 vs 白底）/ sampling_params 一致 → [systematic_vs_stochastic_divergence](memory/feedback/systematic_vs_stochastic_divergence.md)
+- **B22** [P1 派生] spawn review sub-agent 时 prompt **禁塞自己 hypothesis / focus**（"重点查 X" = 偏见通过 prompt 传染过去）；要么开放式 audit（"列所有问题分级 P0/P1/P2"），要么并行多 framing union → [review_delegation_framing](memory/feedback/review_delegation_framing.md)
+- **B33** [P1+B22 派生] sub-agent review prompt **禁用** "code check 一下" / "看有没有问题" / "review 一下" 类开放但无 audit 框架的 framing——子 agent 必答 "OK" / "no issues found"，护不住，reviewer 一上来就打回。必须用 reviewer-lens 4 项 audit 模板（duplication / layering / edge cases / surface area）显式列每项要返回的 finding 或 "none found"，或起 3 个 sub-agent 各跑一项 union → [reviewer_lens_audit](memory/feedback/reviewer_lens_audit.md)
+- **B23** [P4 派生] TaskCreate 列**枚举步骤**（"该检查的事"）不是修复目标（"已知要修的事"）；sub-agent 返回 action list 当 ground truth 前必开 meta-task 独立 re-enumerate；API rename / 加 producer 字段各有触发模板 → [task_as_audit_enumeration](memory/feedback/task_as_audit_enumeration.md)
+- **B24** [P1 派生] reviewer / 同事说"正常 X" / "应该 X" / "通常 X" = invariant 是 **bug detector 不是 design intent**；触发 → grep / 实测；观察 ≠ X 立刻进根因模式，**禁**找台阶（"design choice" / "次优但 acceptable"） → [conclusion_discipline](memory/feedback/conclusion_discipline.md)
+- **B25** [P3 派生] 声明"X harmless / 次优但正确 / 不需要修"前必须写完整因果链 "X → path P → Y → 被 Z 截断/丢弃 → 不到 final output" + 列**所有副作用**（latency / compute / 状态污染 / 下游污染）；链不完整不准用 harmless → [conclusion_discipline](memory/feedback/conclusion_discipline.md)
+- **B26** [P1 派生] 嘴上 / commit message / 结论必须带前缀 **"推理：（从 source 看）"** 或 **"实测：（跑过 X，证据 Y）"**；混说 = 用推理冒充实测 = 撒谎 → [conclusion_discipline](memory/feedback/conclusion_discipline.md)
+- **B27** [P3 派生] crash / AttributeError / 任意 exception = **trace upstream 起点不是 stop sign**：必须 trace "为啥这个 path 拿到 wrong-type"；**禁** revert 上一步 + 宣告"这条路不通"（第一次 crash 已给根因位置） → [hunyuan_kv_reuse_orchestrator](.claude_errors/hunyuan_kv_reuse_orchestrator.md)
+- **B28** [P1+P2 派生] 用户 **≥ 2 次** 说"X 有问题" / 反驳同一结论 → **立即翻盘**到用户判断当 ground truth；禁继续找新角度的台阶（"换个层面看" / "再补充一下"）；两次反驳 = 我立场就是错 → [conclusion_discipline](memory/feedback/conclusion_discipline.md)
+- **B29** [P2 派生] 用户给具体 fix 指令 + 修改点 identified → **直接动手** edit / commit / push / 测试；**禁** detour 去 read sibling 实现 / "确认一下 X 怎么做"（confirmation seeking 伪装成 due diligence） → [conclusion_discipline](memory/feedback/conclusion_discipline.md)
+- **B30** [P1 派生 + B7 扩展] algorithm 决策（AR stop / EOS / sampling / 特殊 token / generate loop / KV 切片或 snapshot 触发点 / prompt 模板 / system prompt 注入位置）前必先 grep upstream 主入口（`modeling_*.py` / `generation_*.py` / `tokenization_*.py`）；upstream repo 已 clone 不读 = 自废武功 → [upstream_first_for_algorithm](memory/feedback/upstream_first_for_algorithm.md)
+- **B31** [P3 派生] 同现象 framework hack（加 config / middleware / defer）和 algorithm fix（改 stop / sampling / prompt）都能解释时 **default to algorithm fix**；信号：hack 注释含"为了应付 X 特殊情况" / 多 hack 互依赖必须一起 work / 加 hack 后还要 extra check 防 hack 崩 → [algorithm_vs_framework_fix](memory/feedback/algorithm_vs_framework_fix.md)
+- **B32** [P1+P4 派生] 调试漏斗：grep 优先于实测、收敛到 1 个怀疑再动手、user 给诊断 ≠ user 给修法。连续 ≥2 次实测仍未定位**强制回静态**；同时持有 ≥2 个独立怀疑**禁止动手 fix**（先静态二分到 1 个）；user 给现象/诊断时写代码前必先 AskUserQuestion framing 修法 scope，**禁脑补"按 X 真值表改函数 + 加参数 + 改 call site"扩散式修法**（B29 反向场景，B29 管 user 给 fix 指令）→ [debug_funnel_discipline](memory/feedback/debug_funnel_discipline.md)
 
-`docs/remote_server.md` 已在 `.gitignore` 里，填了密码也不会被 commit。
+### C. CI / 测试
+- **C1** 做"团队同款 CI"先打开 `tests/` 现有文件看一眼，别基于幻觉讨论方案 → [always_inspect_existing_tests_first](memory/ci/always_inspect_existing_tests_first.md)
+- **C2** 写 accuracy test 时所有 CLI 参数必须从 fixture 透传到 benchmark（`--samples-per-type` / `--max-samples` 漏传 = 跑全量数据集，smoke 变几小时）
+- **C3** 离线环境（`HF_HUB_OFFLINE=1`）跑 accuracy test 前 checklist：generate model / judge model / dataset 三项齐全 `ls $HF_HOME/hub/ | grep models--`
+- **C4** 跑远端脚本前过启动前三连：(1) GPU 空闲 (2) 模型路径存在 (3) 缓存变量正确；kill 进程后必 `sleep 5 + nvidia-smi` 确认显存归零
+- **C5** [P5 派生]"vllm-omni 对齐官方"回归测试四红线：(a) official 必须从 snapshot 加载不能 `from vllm_omni` 导入自副本 (b)"X 输出"默认 generated output 解读，input prefill 简化必须显式 ack (c) 跑通的 yaml / 路径不许无解释替换 (d) 两侧 input（prompt / 图 / sampling / max_tokens / bot_task）必须从同一句 regression intent 派生，**禁从 benchmark/example 脚本抄输入** → [pr_workflow §5](memory/feedback/pr_workflow.md) / [ci_and_testing](.claude_errors/ci_and_testing.md)
+- **C6** 加/改 CI 测试、dummy guard、smoke test、PR-level watch test 时 `compileall` + `git diff --check` **不算验证**；新增/改的测试函数必须实跑一次；本地缺 deps 用 venv / 容器 / 最小脚本走相同 core path；跑不动就显式声明阻塞，禁声称"已验证"。dummy 用 `object.__new__` 时不能假设 attr 可写，read-only property 在 class 级 monkeypatch
+- **C7** 提交/推 PR 前必须跑覆盖本次改动文件的 `ruff check`（需要时再跑 `ruff format --check` 或 pre-commit 对应 hook）；只跑 `py_compile`/pytest 不够。CI 报 ruff 失败视为本地验证漏项，修完必须 amend+push 并复跑 → [.claude_errors/ci_and_testing.md §2026-05-19](.claude_errors/ci_and_testing.md)
+- **C8** [P5+P8 派生] 新增/修改 `stream` 参数、SSE chunk、WebSocket message、OpenAI-compatible streaming schema 时，必须先 diff 仓库已有 streaming endpoint 的异常语义，并补坏路径测试：structured 4xx 不能丢成 500、`EngineDeadError` 不能被 generic error chunk 吞掉、`delta` 必须能客户端 append 重建最终状态、`[DONE]` 分支明确。只测 200 + happy chunks 不够 → [.claude_errors/ci_and_testing.md §2026-05-19](.claude_errors/ci_and_testing.md) / [reviewer_lens_audit](memory/feedback/reviewer_lens_audit.md)
 
-## 可用 Skills（`vllm-omni/.claude/skills/`）
+### D. Git / PR
+- **D1** git commit 默认加 DCO sign-off（`-s`），缺 sign-off 上游 CI 拒绝
+- **D2** 开发在 git worktree 里做，主仓库工作区保持干净；命名 `wt-<purpose>`，完事 `git worktree remove`
+- **D3** 开 PR 前 + cherry-pick/rebase 后必跑 `git log --oneline origin/main..HEAD | nl` 逐条查污染；`git diff --stat` 改的文件应跟 PR 主题强相关，无关文件 >1-2 个就要查 → [git_and_pr_branch_pollution](.claude_errors/git_and_pr_branch_pollution.md)
+- **D4** vllm-omni 框架负责仓库是 `D:\vllm-omni\vllm-omni`（代码包在 `vllm_omni/`）；主仓分支保持 `main`，只作为干净基准同步源：开工前可 `git fetch origin main` 后 `git pull --ff-only origin main`，必要时用 `git reset --hard origin/main` 强制对齐；禁止在主仓工作区写业务改动，代码工作一律另开 worktree → [pr_workflow](memory/feedback/pr_workflow.md)
+- **D5** 写 PR 描述前必须读仓库 `.github/PULL_REQUEST_TEMPLATE.md`；vLLM-Omni PR 描述固定用 `Purpose / Test Plan / Test Result`，不要用通用 `Summary / Changes / Tests`。新增 public API 字段 / CLI 参数 / SSE schema / OpenAI-compatible 参数时，PR 前必须同步对应 docs，并在 Test Plan/Result 写明文档检查 → [git_and_pr_branch_pollution](.claude_errors/git_and_pr_branch_pollution.md)
+- **D6** 业务代码/测试代码写完并准备提交或推 PR 前，必须开 sub-agent 做 reviewer-lens audit（duplication / layering / edge cases / surface area）并结合 code_taste 审 diff；不能等用户手动提醒。sub-agent finding 必须先处理或明确记录不处理理由，再 commit/push → [reviewer_lens_audit](memory/feedback/reviewer_lens_audit.md) / [.claude_errors/git_and_pr_branch_pollution.md §2026-05-19](.claude_errors/git_and_pr_branch_pollution.md)
 
-仓库内置的接入工程模板，由 Claude Code 自动加载。**何时主动调用**：
+### E. 架构国策
+- **E1** 改 `pipeline_registry.py` 而不是 YAML；改 YAML 为 CLI；不引入新 JSON/YAML 启动配置文件
 
-| Skill | 触发条件（命中即用 Skill 工具调用，名字一致） | 当前项目相关性 |
-|-------|------------------------------------------------|----------------|
-| `add-diffusion-model` | 接入 HunyuanImage3 的 **DiT 部分** / 新增任何 diffusion 模型 / 改 `vllm_omni/diffusion/models/` 下的 pipeline 或 transformer / 加 TP・SP(USP)・CFG-Parallel・HSDP・Cache-DiT・CPU offload / 注册 `_DIFFUSION_MODELS` | **高**——HunyuanImage3 走 Path B（custom repo + bypass loader），BAGEL 是直接参考样例 |
-| `add-tts-model` | 新增 TTS 模型 / 接 `serving_speech.py` / async chunk 流式 / 给 AR 热环加 CUDA graph | 目前无（HunyuanImage3 是 image，不是 audio）。**例外**：将来给 AR decode 加 CUDA graph 提速时可参考 Phase 5 |
-| `vllm-omni-npu-upgrade` | 把 GPU runner 的 omni 改动同步到 NPU runner / 升级 vllm-ascend 对齐 | 目前无（GPU 工作流，不碰 NPU）。**附带价值**：grep `Omni-new` 注释块可以快速定位 `gpu_*_model_runner.py` 里 vllm-omni 在 vllm 上加的改动 |
+### F. 编码行为
+- **F1** 动手前先说明假设；多种解读时列全部方案不要悄悄选一个；不确定就停下问
+- **F2** 只写够用的最少代码：不加未被要求的功能/抽象/灵活性；200 行能 50 行写就重写（B5 管选型，F2 管体积）
+- **F3** 只碰任务直接涉及的代码：不顺手优化周边、不改风格、不删无关死代码；匹配既有命名/缩进；只清理自己改动产生的孤儿
+- **F4** 多步任务先列 `1. [步骤] → verify: [如何确认]` 计划再执行；"应该能跑"不算验证
+- **F5** 第一性原理：设计决策先问"根本约束是什么"，从约束往上推方案，不靠类比或惯例拍脑袋
+- **F6** 奥卡姆剃刀：同等需求选最简方案；不引入多余层次/概念/依赖（B3 管资源量，F6 管方案复杂度）
+- **F7** [P6 派生] 拒绝静默降级：禁 `dict.get("k") or fallback` / `hasattr` / `getattr(obj, "k", default)` / `generator=None`；schema 报错先问"约束本身对吗"再决定改 input 还是改 schema；任何 hack 必 `logger.warning` 留痕 → [painterly_silent_bugs](.claude_errors/painterly_silent_bugs.md)
+- **F8** [P7 派生 + F3 加强] 调试/PR 主线发现"顺手优化"必**分类**：(a) 主线必需（删掉主线 broken / test fail / crash）→ 留下；(b) 周边收益（latency / 可读性 / 别处少绕一圈）→ **延后独立 PR**；信号 = commit message 想分两段 / reviewer 能独立 review 不依赖主线；**禁** commit 出现 "plus housekeeping" / "顺手 fix" / sunk-cost "都写完了不删可惜" → [narrow_optimization_scope](memory/feedback/narrow_optimization_scope.md)
+- **F9** Windows/PowerShell 打开文本一律 UTF-8：优先显式 `Get-Content -Encoding utf8` / `Set-Content -Encoding utf8`；本机已在 PowerShell profile 设 `Get/Set/Add-Content` 和 `Out-File` 默认 UTF-8，但仍不要依赖 Python 环境变量解决 PowerShell 文件解码 → [execution_principles](memory/feedback/execution_principles.md)
+- **F10** [P8 派生] 写任何代码前必须读 [code_taste](memory/feedback/code_taste.md)。代码品味不是 push 前 pass：动手前就要按人工 reviewer 视角检查命名是否说清机制、逻辑是否住在数据 owner、helper 是否复用、测试是否放行为 owner、注释是否解释策略、API knob 是否必要、diff 是否有临时补丁味；新增参数必须同步 docstring contract，generic helper 命名不能泄漏 caller-specific 语义；optional tensor/cache/staged 参数必须拆 data contract + execution-context contract，wrong caller 要在 owner 边界早炸。
 
-**调用方式**：用 `Skill` 工具，`skill` 字段填名字（如 `add-diffusion-model`）。**不要**和 `CLAUDE.md` 里的硬规则、`memory/`、`.claude_errors/` 冲突——skill 是"怎么写代码 fit 进框架"，硬规则是"怎么不踩远端/容器/调试的坑"，两者互补。
+---
 
-**另外**：`claudeception` skill 负责数据飞轮自动积累——从会话提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分。调用 `/claudeception` 或在 stop-gate hook 提示时触发。
+## 索引
 
-## 项目记忆（`memory/`）
-
-跨会话持久化知识，每个文件一个主题，带 frontmatter 元数据。
-
-| 文件 | 描述 |
-|------|------|
-| [remote_node_general.md](memory/remote_node_general.md) | **进入陌生远端节点的通用流程**（别假设路径，先看别人容器怎么挂） |
-| [no_container_ephemeral.md](memory/no_container_ephemeral.md) | **规则：永远写宿主挂载路径，不写容器临时路径**（HF_HOME / pip cache 等） |
-| [srun_exit_kill_container_procs.md](memory/srun_exit_kill_container_procs.md) | **规则：退 srun 前必须清容器里的进程**（Slurm 管不了 docker 内进程，漏做占死 80GB 卡） |
-| [ar_dit_bridge.md](memory/ar_dit_bridge.md) | AR→DiT 数据桥接：需传 cot_text 而非 raw token IDs |
-| [bidirectional_attention.md](memory/bidirectional_attention.md) | 图像 token 双向注意力：需加 `is_mm_prefix_lm` |
-| [version_compat.md](memory/version_compat.md) | 远端 vllm/numpy/cv2 版本兼容问题 |
-| [user_prefs.md](memory/user_prefs.md) | 用户协作偏好 |
-| [ci_gitignore_json.md](memory/ci_gitignore_json.md) | .gitignore 有 `*.json`，新增 JSON test config 必须 `git add -f` |
-| [feedback_no_detours.md](memory/feedback_no_detours.md) | 优先最简单直接的方案，不要绕远路 |
-| [always_inspect_existing_tests_first.md](memory/always_inspect_existing_tests_first.md) | 做 CI 类需求先看 tests/ 现有文件 |
-| [docker_exec_cwd_workaround.md](memory/docker_exec_cwd_workaround.md) | docker exec 报 chdir permission denied 的 workaround |
-| [remote_is_hongkong.md](memory/remote_is_hongkong.md) | 香港机器直连 PyPI，不要用清华源 |
-| [auto_push_pr_branches.md](memory/auto_push_pr_branches.md) | PR 分支改完自动 push，不等用户说 |
-| [transformers_cache_gotcha.md](memory/transformers_cache_gotcha.md) | TRANSFORMERS_CACHE 覆盖 HF_HOME 陷阱，必须 unset |
-| [feedback_follow_user_instruction.md](memory/feedback_follow_user_instruction.md) | 用户给出明确方案时直接执行 |
-| [feedback_remote_debug_strategy.md](memory/feedback_remote_debug_strategy.md) | 远端调试不走 git 循环，先在远端快速试错 |
-| [feedback_tokenizer_debug_retro.md](memory/feedback_tokenizer_debug_retro.md) | 先侦察再写代码，HF cache 结构备忘 |
-| [feedback_use_venv.md](memory/feedback_use_venv.md) | 远端用 source .venv/bin/activate，不用 PYTHONPATH hack |
+- 项目记忆主入口：[memory/MEMORY.md](memory/MEMORY.md)
+- 架构 & 代码地图：[docs/architecture.md](docs/architecture.md)
+- 远端服务器：[docs/remote_server.md](docs/remote_server.md)（不存在时从 `docs/remote_server.template.md` 复制；问用户填 SSH 用户名/IP/密码、节点 hostname、Slurm 分区、工作目录、容器名、tmux session；已在 `.gitignore`）
 
 ## 包管理
 
-- 远端容器内安装包一律用 `uv pip install`，不要用原生 `pip install`
-- uv 在 Lustre 挂载目录下会报 `uv.toml` permission denied，需先 `cd /tmp` 再执行
-
-## Error Book 格式
-
-任何新踩的坑按主题追加到 `.claude_errors/<topic>.md`（如 `git_and_rebase.md`、`docker_and_container.md`）：
-
-```markdown
-## YYYY-MM-DD HH:MM — <一句话标题>
-**症状**：<报错/不符合预期的具体表现>
-**根因**：<分析后的真正原因>
-**解法**：<怎么修的>
-**对未来的提醒**：<下一次怎么避免>
-```
+- 远端容器内一律 `uv pip install`，不用原生 `pip install`
+- uv 在 Lustre 挂载目录报 `uv.toml` permission denied，先 `cd /tmp` 再执行

@@ -54,7 +54,7 @@ cp docs/remote_server.template.md docs/remote_server.md
        ↓
    Claude 看到提醒
        ↓
-   自动执行（你点头确认）
+   Claude 生成候选记录 → 展示 diff → 你点头确认
        ↓
    memory/ + .claude_errors/ + CLAUDE.md 自动长大
        ↓
@@ -66,7 +66,7 @@ cp docs/remote_server.template.md docs/remote_server.md
 **额外的自动化（skills/ 提供）**：
 
 - `claudeception` — 数据飞轮核心：从会话自动提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分
-- `reflect-system` — 自动从对话提取你的偏好/纠正 → 改进相关 skill
+- `reflect-system` — Stop hook 后台从对话提取你的偏好/纠正写到 pending review（不会自动应用，因为后台进程没法跟你交互）；打 `/reflect-review` 让 Claude 列出 pending、跟你讨论 diff、确认后才应用到对应 skill
 - `clean-thinking` — 遇到 `Invalid signature in thinking block` API 报错时自动修
 
 **会话快爆时**：打 `/lastwords` 或 `/遗言`，自动生成交接文档。
@@ -120,6 +120,23 @@ starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 - `CLAUDE.md` 前 21 条原硬规则全是 vLLM-Omni 实战，**保留作 case study**——用一阵后看哪些不适用你的项目，自己删
 - `memory/` 里 vLLM-Omni 特有的（如 `ar_dit_bridge.md`、`bidirectional_attention.md`）—— 用一阵后清掉，留下通用的
 - `.claude_errors/hunyuan_image3.md` —— 当 case study 看一遍，写自己的之前不要删（学格式）
+
+---
+
+## 隐私说明
+
+这个 starter 的飞轮机制涉及读取/落盘会话内容，对外发布前请知悉以下行为：
+
+- **不会主动上传**：本工具不会把 SSH 密码、API token、私钥推送到任何远端。所有飞轮产出都在本地或你显式 push 的仓库里。
+- **本地落盘**：`reflect-system` 会读 Claude Code 的 transcript，提取你的纠正/反馈片段（截断到 500 字符），保存到 `~/.claude/skills/reflect-system/meta/feedback-log.jsonl`。这是本地文件，不会自动 push，但要知道它在那里。
+- **`.claude_errors/` 默认确认**：写入 `.claude_errors/` 之前 Claude 会展示 diff 并问你；hook 提示语只是建议，不直接落盘。如果你要更严格，把 `.claude_errors/` 也加进 `.gitignore`。
+- **远端密码的存放**：放到 gitignored 的 `*.md` 实例文件（如 `docs/remote_server.md` / `memory/remote/ssh_connection_pattern.md`），**不要**写到环境变量——env var 在 `ps -ef` / `/proc/<pid>/environ` / shell history 里都能看到，反而比物理隔离的 markdown 更危险。
+- **Commit 前自检**：
+  ```bash
+  git status --ignored                       # 看哪些文件被 gitignore 拦了
+  git check-ignore -v <你担心的文件>          # 验证某文件确实被忽略
+  git diff --cached | grep -iE 'password|token|<YOUR_REAL_IP>'  # 自定义 grep
+  ```
 
 ---
 
