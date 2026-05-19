@@ -46,6 +46,9 @@ python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained
 - **tmux 前台进程陷阱**：`python ... | tee log` 占住 shell，`send-keys` 发的命令进了进程 stdin。测试 API 必须从**另一个 window** 发请求
 - **docker exec 跨节点引号陷阱**：`ssh nodeA "docker exec $(docker ps -q) ..."` 的 `$()` 在本地展开 → 必错。解法：写脚本到 Lustre，然后 `ssh nodeA bash /shared/path/script.sh`
 - **远端发命令后必先短 sleep（≤5s）+ capture 确认脚本真启动了**（看到 pytest `collected N items` / 程序日志 / 明确错误信息），再长 sleep 等结果。光看 shell 回显不算
+- **PowerShell→SSH→bash 脚本投递陷阱**：`$VENV` / `$()` 可能被本地 PowerShell 展开，UTF-8 BOM 会污染 shebang，脚本甚至可能落成 0 字节。远端落盘后先 `wc -c` + `sed -n '1,40p'` + `bash -n`，必要时去 BOM。
+- **路径猜测陷阱**：HF snapshot 只代表权重/processor 资产，不代表 deploy yaml。写远端脚本前先 `find $WORK_DIR ... -name "*deploy*yaml"` 和 `test -f "$MODEL_CFG"`，不要假设 snapshot 下有 `deploy.yaml`。
+- **旧 PR venv/ABI 陷阱**：base commit 不一定兼容当前默认 venv。测旧 PR 先跑 base worktree 的 import/init smoke，确认 custom op / scheduler symbol / vLLM version 匹配；base 起不来时结论是 environment blocker，不是 PR 性能数据。
 
 ## Plan 拆分
 
@@ -57,3 +60,6 @@ Plan 按当前任务拆，不要把未来工作混进来。当前任务是 X 就
 - 合并 SSH：一次发多条命令（`&&` 或脚本）
 - 减少 capture 频率：合理估算等待时间，不要频繁轮询
 - 复杂操作写远端脚本一次执行
+- 新终端接手远端任务时，先从当前会话/issue/PR 摘 5 行 runbook（head sha、worktree、venv、tmux、out_dir），不要把已知远端重新 `find` 一遍。
+- 已知有 `$WORK_DIR/wt-...` worktree 时，先 `git -C <dir> status` / `rev-parse HEAD` 验证事实；只有不一致才扩大搜索。
+- PowerShell 管道可能因 CRLF/BOM 让路径检查变脏；看到“文档路径不存在”这类结论，先用无 BOM/LF 聚合脚本复查。
