@@ -81,9 +81,9 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 | 资产 | 用途 |
 |------|------|
-| `CLAUDE.md` | 22 条硬规则（含 worktree 约束）+ 项目索引 + Skills 表 |
-| `memory/` | 常识 book（18 篇 frontmatter MD）—— 跨会话项目知识 |
-| `.claude_errors/` | error book —— 踩坑地册（已含 vLLM-Omni 实战 case） |
+| `CLAUDE.md` | P1-P8 宪法 + ~50 条派生硬规则 + 项目索引 |
+| `memory/` | 常识 book（~50 篇 frontmatter MD，按 feedback/remote/ci/hf 分目录）—— 跨会话项目知识 |
+| `.claude_errors/` | error book —— 踩坑地册（已含 vLLM-Omni 实战 12 篇 case） |
 | `docs/remote_server.md` | 脱敏版远端 GPU 服务器连接指南 |
 | `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command） |
 | `.claude/hooks/stop-gate.sh` | **核心自动化**：每次 turn 结束触发飞轮 |
@@ -96,11 +96,11 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 ## 为什么这么设计
 
-22 条硬规则全是从"违反过 N 次"的踩坑里熬出来的——每条末尾"违反过 N 次（YYYY-MM-DD）"就是飞轮转动的痕迹。
+**P1-P8 宪法** 是从 3 个月实战里提炼的 8 条不可违反原则（证据先行、简单直接、完整链路、单变量隔离、测试打真实路径、拒绝静默降级、范围自律、代码品味）。~50 条硬规则全是宪法在具体场景的派生，每条标了从哪条宪法来。
 
 starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 
-如果你踩到了新坑（22 条没覆盖的），hook 会自动提醒你写到 `.claude_errors/`；写够 2 次它就该升级到 `CLAUDE.md`。**这就是飞轮自己转大的方式**。
+如果你踩到了新坑（现有规则没覆盖的），hook 会自动提醒你写到 `.claude_errors/`；同坑 ≥2 次就升级到 `CLAUDE.md` 硬规则，**必须标 P1-P8 派生**。这就是飞轮自己转大的方式。
 
 ---
 
@@ -108,18 +108,21 @@ starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 
 来自实战：vLLM-Omni 跨节点（SSH + Slurm + Docker + Lustre）跑 80B 模型的踩坑记录。如果你也做类似的工作，重点看：
 
-- **CLAUDE.md** 22 条硬规则里 13 条关于远端/容器（#1-6, #8-20 大部分）
-- **memory/** 里：`remote_node_general.md`、`no_container_ephemeral.md`、`srun_exit_kill_container_procs.md`、`transformers_cache_gotcha.md`、`docker_exec_cwd_workaround.md`、`feedback_remote_debug_strategy.md` 等
-- **docs/remote_server.md** —— SSH/Slurm/tmux/docker 操作模板（脱敏后，首次使用前填 placeholder）
+- **CLAUDE.md** A 组规则（A1-A12）—— 远端/容器/Slurm 全覆盖
+- **memory/remote/** —— `node_basics.md`（进新节点流程）、`container_setup.md`（容器持久化 + HF cache 陷阱）、`srun_lifecycle.md`（退 srun 三步走 + 偷空闲 GPU）、`ssh_workflow.md`（SSH key + retry）、`hf_offline_mandatory.md`（HF 加载必须 OFFLINE）
+- **memory/feedback/** —— `remote_debug_strategy.md`（先侦察再写代码）、`execution_principles.md`（简单方案优先）
+- **docs/remote_server.template.md** —— SSH/Slurm/tmux/docker 操作模板（首次使用前填 placeholder）
 - **`.claude/hooks/stop-gate.sh`** —— 写完代码自动提醒去远端跑测试
 
 ---
 
 ## 要改的（少量）
 
-- `CLAUDE.md` 前 21 条原硬规则全是 vLLM-Omni 实战，**保留作 case study**——用一阵后看哪些不适用你的项目，自己删
-- `memory/` 里 vLLM-Omni 特有的（如 `ar_dit_bridge.md`、`bidirectional_attention.md`）—— 用一阵后清掉，留下通用的
-- `.claude_errors/hunyuan_image3.md` —— 当 case study 看一遍，写自己的之前不要删（学格式）
+- `CLAUDE.md` 宪法 P1-P8 和 B/C/D/F 组大部分规则是**通用方法论**，直接留用
+- `memory/archive/hunyuan/` 是 HunyuanImage3 接入考古——当 case study 看一遍，不适用你的项目就清掉
+- `memory/hf/` 里的 HF baseline 对齐方法适用于所有 `trust_remote_code` 模型，不只 HunyuanImage3
+- `.claude_errors/` 里的 painterly / KV reuse 系列——当 case study 学格式，写自己的之前不要删
+- **E 节（架构国策）** 是占位——按你项目的架构约束填具体规则
 
 ---
 
