@@ -9,7 +9,7 @@ type: feedback
 遇到环境问题时，先检查现有环境（venv、conda）是否已经有需要的东西，有就直接用。**不要**在简单方案存在时选复杂方案（PYTHONPATH hack、pip 升级系统包、加别名 patch 等）。
 
 **Why:** 用户原话"你为什么就是不肯用 source .venv 呢"。绕路方案不可靠（PYTHONPATH 优先级问题、遗漏依赖），还浪费时间。
-**How to apply:** 远端跑 vllm-omni 前，第一步永远是 `source <YOUR_REMOTE_WORKDIR>/.venv/bin/activate`，不要 PYTHONPATH 指 `.venv/lib/...`。
+**How to apply:** 远端跑框架代码前，第一步永远是 `source <YOUR_REMOTE_WORKDIR>/.venv/bin/activate`，不要 PYTHONPATH 指 `.venv/lib/...`。
 
 **反例（cp -r 复制 venv）：** 用户说"在新节点用你自己的 new venv 跑"，我去 `cp -r <OTHER_PATH>/venv .venv` 想复制一份。错两层 —— (a) "new" 字面是 `uv venv` 新建，cp 出来的是别人 venv 状态的副本；(b) cp -r 对 venv（含 symlink / uv cache / 并行 fs）几乎一定膨胀（8.8GB → 25GB+）。**正确做法**：`uv venv .venv` + `uv pip install <framework>==X` + `uv pip install -e . --no-build-isolation`，uv wheel cache 命中后跟 cp 同速且干净。这条是 §1 反向踩坑——"复用别人 venv = 现成方案" 是错觉，**新装 = 现成方案**（uv 让 install 几乎是 O(cache lookup)）。
 
@@ -20,7 +20,7 @@ type: feedback
 **How to apply:**
 - 读文件：`Get-Content -Path <file> -Encoding utf8`
 - 写文件：`Set-Content -Path <file> -Encoding utf8` / `Out-File -Encoding utf8`
-- 本机已在用户级 PowerShell profile 里设置默认值，覆盖裸 `Get-Content -Raw CLAUDE.md` 这种启动动作：
+- 本机已在用户级 PowerShell profile 里设置默认值：
   - `C:\Users\user\Documents\WindowsPowerShell\profile.ps1`
   - `C:\Users\user\Documents\PowerShell\profile.ps1`
 - 如果只是终端显示乱码，可在当前 shell 先设：
@@ -30,13 +30,13 @@ type: feedback
   ```
 - 但 Python 环境变量（`PYTHONUTF8` / `PYTHONIOENCODING`）只影响 Python，不影响 PowerShell `Get-Content`；文件 cmdlet 仍以 profile 默认值或显式 `-Encoding utf8` 为准。
 
-**Why:** `Get-Content CLAUDE.md` 曾把中文规则读成乱码，影响规则理解。这个是老毛病，不能靠记忆临场想起。
+**Why:** `Get-Content CLAUDE.md` 曾把中文规则读成乱码，影响规则理解。
 
 ## 2. 用户给出明确方案时直接执行，禁止"先试试不改"
 
 用户说 TP=2 + 减层时，**直接** TP=2 + 减层。不要先试 TP=2 不减层、OOM 后再减层。
 
-**Why:** 远端机器时间宝贵（每轮 serve 启动+失败要几分钟）。用户比你更了解模型和硬件约束。2026-04-21 违反过 1 次烧了一轮远端调试。
+**Why:** 远端机器时间宝贵（每轮 serve 启动+失败要几分钟）。用户比你更了解模型和硬件约束。
 **How to apply:** 用户给明确技术方案 → 直接执行。不要"先试试不改看行不行"。
 
 ## 3. 已知结论直接应用，禁止重新推导
@@ -50,9 +50,9 @@ type: feedback
 
 用户简短指令 ≠ 字面操作。每次先用近 2-3 轮上下文还原完整意图再执行。
 
-**Why**：2026-05-04 一次会话连犯两次：
-- "push到taff" → 我按字面 push 到 TaffyOfficial fork，但用了**自造 branch 名**，没意识到隐含意图是"更新 PR 2986"
-- "B" → 我开始详细解释，被打断"搞快点"才砍——之前的 (B) 选项已经讨论过，用户选 B 就是要直接落代码，不要再展开
+**Why**：多次犯同类错误：
+- "push 到 X" → 按字面 push，但没意识到隐含意图是"更新已有 PR"，结果用了自造 branch 名
+- "B" → 开始详细解释，被打断"搞快点"才砍——之前的 (B) 选项已经讨论过，用户选 B 就是要直接落代码
 
 **How to apply**：
 - 收到极简指令（≤5 字 / ≤2 句）时，先在内部 reconstruct："用户上一轮在做什么 → 这条指令在那个 task 链上对应什么具体动作"
@@ -66,7 +66,7 @@ type: feedback
 
 When the user gives only `IP:port` for a remote server, **attempt SSH directly first** (defaults: `root@<ip> -p <port>` with the local default key + key-auth). Don't ask the user for username, password, or environment context until that probe actually fails.
 
-**Why:** 用户原话（2026-05-04 / 2026-05-08 重复犯）"直接 ssh 就行"。问 6 个问题（username? password? GPU count? model path? venv ready? docker?）每个都是一行 `ssh '...'` 的事。
+**Why:** 用户原话（多次重复犯）"直接 ssh 就行"。问 6 个问题（username? password? GPU count? model path? venv ready? docker?）每个都是一行 `ssh '...'` 的事。
 
 **How to apply:** First contact with a fresh remote → run `ssh -o StrictHostKeyChecking=no -p <port> root@<ip> 'hostname && nvidia-smi -L && pwd && ls'`（或类似单条合并探针）。Only ask the user when:
 - SSH probe returns `Permission denied` for both publickey and password
@@ -79,11 +79,11 @@ When the user gives only `IP:port` for a remote server, **attempt SSH directly f
 
 When a runtime stack reports compound errors (each crash reveals the next unrelated symptom), and **each individual error is a small targeted fix** (rename a kwarg, swap a submodule import, drop a dropped parameter), keep grinding through them. Don't escalate to "this is fundamentally broken" until the user actually agrees the next patch isn't worth it.
 
-**Why:** 2026-05-04 vllm-omni IT2I session（port 31469 pod），第 3 个 dep-mismatch 我就喊"vllm-omni × vllm 0.20 × transformers 5.54 fundamentally broken"，用户怒怼"之前不是打死都说不行么"。其实 4 个错每个都是 1-3 行 sed：
-1. `from ...shared_fused_moe import SharedFusedMoE` → try/except fallback to `FusedMoE`
-2. Drop `reduce_results=False` from FusedMoE call sites（vllm 0.20 移除）
-3. `Siglip2VisionModel(cfg).vision_model` → `Siglip2VisionModel(cfg)`（transformers 5.54 attr rename）
-4. Rename vit_kwargs key `attention_mask` → `pixel_attention_mask`（transformers 5.54 param rename）
+**Why:** 某次 dep-mismatch 场景，第 3 个错误出现时就喊"fundamentally broken"。用户怒怼"之前不是打死都说不行么"。其实 4 个错每个都是 1-3 行 sed：
+1. import path 变更 → try/except fallback
+2. 某参数被上游移除 → drop 对应 call sites
+3. 某 class attribute rename → 访问新路径
+4. 某 kwarg 改名 → rename call sites
 
 四条全打完直接进真正的 model loading。"fundamentally broken" 完全是错觉。
 

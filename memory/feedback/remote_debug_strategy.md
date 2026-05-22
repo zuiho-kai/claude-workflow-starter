@@ -1,7 +1,8 @@
 ---
 name: 远端调试策略：先侦察、本地试错、不走 git 部署循环
-description: 2026-04-21 HunyuanImage3 tokenizer 修复用 6 轮 git commit-push-pull 才跑通，烧一天+$300。教训：调试 ≠ 部署、先侦察再写代码、tmux/docker exec 引号陷阱
-type: feedback
+description: 调试 ≠ 部署、先侦察再写代码、tmux/docker exec 引号陷阱；6 轮 git commit-push-pull 循环才跑通的教训
+metadata:
+  type: feedback
 ---
 
 ## 核心原则

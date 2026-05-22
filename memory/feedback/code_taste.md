@@ -8,14 +8,14 @@ type: feedback
 
 **硬规则：凡是要写业务代码、测试代码、示例代码、API 字段、CLI 参数、helper 函数，动手前必须先读本文件。**
 
-这不是“多跑一个 pass”。人工 reviewer 抓的是代码气味：名字误导、逻辑住错层、helper 重复、测试放错、注释没解释策略、API 面膨胀、diff 像临时补丁。测试通过只能证明“这条路径没坏”，不能证明代码有品味。
+这不是”多跑一个 pass”。人工 reviewer 抓的是代码气味：名字误导、逻辑住错层、helper 重复、测试放错、注释没解释策略、API 面膨胀、diff 像临时补丁。测试通过只能证明”这条路径没坏”，不能证明代码有品味。
 
-来源：PR #3626 后续 review。功能基本正确，但 Bounty-hunter 仍指出：
+典型被打回点：
 
-- `force_ratio` 命名让人分不清 force size 还是 force ratio token
-- PackedRoutingCompat 测试放在 fused MoE 文件，行为归属不对
-- pipeline 里复制 resize/crop helper，而不是放到 image processor 复用
-- infer-align 后处理策略缺注释，人工 reviewer 不知道为什么这么分支
+- 参数名让人分不清 size 还是 ratio 还是 token
+- 测试类放在语义不符的测试文件里
+- pipeline 里复制 helper，而不是放到正确 owner 复用
+- 后处理分支策略缺注释，reviewer 不知道为什么这么选
 
 ## 0. 写前先问：这代码会不会像临时补丁？
 

@@ -1,37 +1,41 @@
 # Claude Code Workflow Starter
 
-源自 vLLM-Omni × HunyuanImage-3.0-Instruct 实战的 Claude Code 工作流。**直接拿去用**，不用学不用配，飞轮自动转。
+一个**通用的 Claude Code 工作流模板**：宪法 + 60+ 条硬规则 + 飞轮自动积累。**直接拿去用**，不用学不用配，飞轮自动转。
 
 ## 谁该用
 
-- 在 vLLM-Omni 上协作的同事 → clone 这个 starter + `git pull` vllm-omni 主仓库即可开发
-- 做远端 GPU 调试的开发者 → 这套体系对 SSH/Slurm/Docker/Lustre 跑大模型特别强
-- 任何想要"Claude 跨会话不丢失项目知识"的人 → memory + error book + 硬规则三件套
+- 想要 "Claude 跨会话不丢失项目知识" 的人 → memory + error book + 硬规则三件套
+- 做远端 GPU 调试的开发者 → 对 SSH/Slurm/Docker/共享 FS 跑大模型的踩坑都覆盖
+- 团队想把"踩过的坑"沉淀成可复用资产 → 飞轮自动转大不靠人工维护
 
 ## 怎么用
 
 ### Step 1: clone 这个 starter
 
 ```bash
-git clone https://github.com/zuiho-kai/claude-workflow-starter.git
+git clone https://github.com/zuiho-kai/claude-workflow-starter-public.git
 ```
 
 ### Step 2: 把你的项目代码放进来
 
 ```bash
-cd claude-workflow-starter
-git clone https://github.com/vllm-project/vllm-omni.git   # 或你自己的项目
+cd claude-workflow-starter-public
+git clone <your-project-repo>
 ```
 
-就这样。CLAUDE.md / memory / .claude_errors / .claude/hooks / skills 都已经在 starter 根目录了，Claude Code 在这个目录下启动就会自动读到。
+`CLAUDE.md` / `memory/` / `.claude_errors/` / `.claude/hooks/` / `skills/` 已经在 starter 根目录，Claude Code 在这个目录下启动就会自动读到。
 
-### 可选：填远端服务器信息
+### Step 3: 填项目国策（CLAUDE.md E 节）
+
+CLAUDE.md 的「E. 架构国策」是占位，填你项目的硬性架构约束（"改 X 不改 Y" / "新增 op 必先 grep Z" 这类）。比通用规则更高优先级，会被 Claude 优先遵守。
+
+### Step 4: 填远端服务器信息（如果用远端 GPU）
 
 ```bash
 cp docs/remote_server.template.md docs/remote_server.md
 ```
 
-然后把 `<YOUR_XXX>` 替换成你的真实信息。`docs/remote_server.md` 已在 .gitignore 里，随便写密码也不会 commit。
+把 `<YOUR_XXX>` 替换成你的真实信息。`docs/remote_server.md` 已在 `.gitignore` 里，随便写密码也不会 commit。
 
 ### 推荐：装 codex-plugin-cc
 
@@ -81,11 +85,11 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 | 资产 | 用途 |
 |------|------|
-| `CLAUDE.md` | P1-P8 宪法 + ~50 条派生硬规则 + 项目索引 |
-| `memory/` | 常识 book（~50 篇 frontmatter MD，按 feedback/remote/ci/hf 分目录）—— 跨会话项目知识 |
-| `.claude_errors/` | error book —— 踩坑地册（已含 vLLM-Omni 实战 12 篇 case） |
-| `docs/remote_server.md` | 脱敏版远端 GPU 服务器连接指南 |
-| `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command） |
+| `CLAUDE.md` | 宪法 P1-P8 + 60+ 条硬规则（A 远端 / B 调试 / C CI / D Git / E 项目占位 / F 编码）+ 索引 |
+| `memory/` | 常识 book —— 跨会话方法论（按主题分子目录，见 `memory/MEMORY.md`） |
+| `.claude_errors/` | error book —— 踩坑地册（开仓时附带通用 case，你踩到坑写进去；飞轮自动积累） |
+| `docs/remote_server.template.md` | 远端 GPU 服务器连接指南模板（首次复制为 `remote_server.md` 后填） |
+| `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command）+ `reflect-review.md` |
 | `.claude/hooks/stop-gate.sh` | **核心自动化**：每次 turn 结束触发飞轮 |
 | `.claude/settings.json` | 注册上面的 hook |
 | `skills/claudeception/` | 数据飞轮自动积累：踩坑→error book，常识→memory，条目过多自动拆分 |
@@ -96,33 +100,31 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 ## 为什么这么设计
 
-**P1-P8 宪法** 是从 3 个月实战里提炼的 8 条不可违反原则（证据先行、简单直接、完整链路、单变量隔离、测试打真实路径、拒绝静默降级、范围自律、代码品味）。~50 条硬规则全是宪法在具体场景的派生，每条标了从哪条宪法来。
+**宪法 → 硬规则 → memory/errors 三层**：
 
-starter 把这套机制完整搬过来：**让你少踩同样的坑**。
+- 宪法 8 条（P1-P8）是 why 层，规则未覆盖的新场景先回这层推
+- 60+ 条硬规则是 P1-P8 在具体场景的派生，每条标注 `[Pn 派生]` 双向可查
+- memory / .claude_errors 是 rationale + 实战案例库，规则末尾的链接点过去
 
-如果你踩到了新坑（现有规则没覆盖的），hook 会自动提醒你写到 `.claude_errors/`；同坑 ≥2 次就升级到 `CLAUDE.md` 硬规则，**必须标 P1-P8 派生**。这就是飞轮自己转大的方式。
+**飞轮自带升级路径**：
+
+- 第一次踩坑 → 写到 `.claude_errors/<topic>.md`
+- 第二次踩同坑 → 升级到 `memory/<topic>.md` 作为常识
+- 第三次或者影响范围大 → 升级到 `CLAUDE.md` 硬规则（**必须标 P1-P8 派生**）
+
+这就是飞轮自己转大的方式。
 
 ---
 
 ## 远端 GPU 调试体系
 
-来自实战：vLLM-Omni 跨节点（SSH + Slurm + Docker + Lustre）跑 80B 模型的踩坑记录。如果你也做类似的工作，重点看：
+如果你做远端 GPU 调试（SSH + Slurm + Docker + 共享 FS 跑大模型），重点看：
 
-- **CLAUDE.md** A 组规则（A1-A12）—— 远端/容器/Slurm 全覆盖
-- **memory/remote/** —— `node_basics.md`（进新节点流程）、`container_setup.md`（容器持久化 + HF cache 陷阱）、`srun_lifecycle.md`（退 srun 三步走 + 偷空闲 GPU）、`ssh_workflow.md`（SSH key + retry）、`hf_offline_mandatory.md`（HF 加载必须 OFFLINE）
-- **memory/feedback/** —— `remote_debug_strategy.md`（先侦察再写代码）、`execution_principles.md`（简单方案优先）
-- **docs/remote_server.template.md** —— SSH/Slurm/tmux/docker 操作模板（首次使用前填 placeholder）
+- **CLAUDE.md A 节**（A1-A12）—— 远端 / 容器 / Slurm 全覆盖
+- **`memory/remote/`** —— `node_basics.md`（进新节点流程）、`container_setup.md`（容器持久化 + HF cache 陷阱）、`srun_lifecycle.md`（退 srun 三步走）、`ssh_workflow.md`（SSH key + retry）、`hf_offline_mandatory.md`（HF 加载必须 OFFLINE）
+- **`memory/feedback/remote_debug_strategy.md`** —— 远端调试方法论
+- **`docs/remote_server.template.md`** —— SSH/Slurm/tmux/docker 操作模板（首次使用前填 placeholder）
 - **`.claude/hooks/stop-gate.sh`** —— 写完代码自动提醒去远端跑测试
-
----
-
-## 要改的（少量）
-
-- `CLAUDE.md` 宪法 P1-P8 和 B/C/D/F 组大部分规则是**通用方法论**，直接留用
-- `memory/archive/hunyuan/` 是 HunyuanImage3 接入考古——当 case study 看一遍，不适用你的项目就清掉
-- `memory/hf/` 里的 HF baseline 对齐方法适用于所有 `trust_remote_code` 模型，不只 HunyuanImage3
-- `.claude_errors/` 里的 painterly / KV reuse 系列——当 case study 学格式，写自己的之前不要删
-- **E 节（架构国策）** 是占位——按你项目的架构约束填具体规则
 
 ---
 
@@ -133,12 +135,12 @@ starter 把这套机制完整搬过来：**让你少踩同样的坑**。
 - **不会主动上传**：本工具不会把 SSH 密码、API token、私钥推送到任何远端。所有飞轮产出都在本地或你显式 push 的仓库里。
 - **本地落盘**：`reflect-system` 会读 Claude Code 的 transcript，提取你的纠正/反馈片段（截断到 500 字符），保存到 `~/.claude/skills/reflect-system/meta/feedback-log.jsonl`。这是本地文件，不会自动 push，但要知道它在那里。
 - **`.claude_errors/` 默认确认**：写入 `.claude_errors/` 之前 Claude 会展示 diff 并问你；hook 提示语只是建议，不直接落盘。如果你要更严格，把 `.claude_errors/` 也加进 `.gitignore`。
-- **远端密码的存放**：放到 gitignored 的 `*.md` 实例文件（如 `docs/remote_server.md` / `memory/remote/ssh_connection_pattern.md`），**不要**写到环境变量——env var 在 `ps -ef` / `/proc/<pid>/environ` / shell history 里都能看到，反而比物理隔离的 markdown 更危险。
+- **远端密码的存放**：放到 gitignored 的 `*.md` 实例文件（如 `docs/remote_server.md`），**不要**写到环境变量——env var 在 `ps -ef` / `/proc/<pid>/environ` / shell history 里都能看到，反而比物理隔离的 markdown 更危险。
 - **Commit 前自检**：
   ```bash
   git status --ignored                       # 看哪些文件被 gitignore 拦了
   git check-ignore -v <你担心的文件>          # 验证某文件确实被忽略
-  git diff --cached | grep -iE 'password|token|<YOUR_REAL_IP>'  # 自定义 grep
+  git diff --cached | grep -iE 'password|token|<你的真实 IP>'  # 自定义 grep
   ```
 
 ---

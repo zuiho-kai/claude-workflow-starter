@@ -15,7 +15,7 @@ type: rule
 | 场景 | ❌ 野鸡做法 | ✅ 正确做法 |
 |---|---|---|
 | 下 HF 模型 | `hf download ...`（默认 `~/.cache/huggingface` = 容器里 `/root/.cache`，**容器删就丢**） | `export HF_HOME=/home/models` **先**，再 `hf download --cache-dir /home/models/hub` |
-| pip install | `pip install foo`（进 `/usr/lib/python*/site-packages` = 容器层，重建丢） | venv 放 `/home/<user>/venvs/xxx` 或直接用镜像自带 `/app/vllm-omni/.venv` |
+| pip install | `pip install foo`（进 `/usr/lib/python*/site-packages` = 容器层，重建丢） | venv 放 `/home/<user>/venvs/xxx` 或直接用镜像自带 `/app/<your-framework>/.venv` |
 | git clone | `git clone ... /tmp/foo` 或 `~/foo` | clone 到 `/home/<YOUR_GROUP>/<user>/sources/` |
 | 临时输出 | `/tmp/output.json` | `/home/<user>/workspace/output.json` |
 | HuggingFace datasets | `~/.cache/huggingface/datasets` | `/home/models/hub` 下的 `datasets--*` 条目，跟模型放一起 |
@@ -82,16 +82,16 @@ python -c "import os; print('TRANSFORMERS_CACHE' in os.environ, 'HF_HUB_CACHE' i
 - model 路径指向 `/models/huggingface/transformers/` 而非 `$HF_HOME/hub/`
 - `LocalEntryNotFoundError` 但模型确实在 `$HF_HOME/hub/` 下
 
-### OmniServer env_dict 不能删除变量
+### env_dict 不能删除变量
 
-`OmniServer._start_server()` 做 `env = os.environ.copy(); env.update(self.env_dict)`——**只能覆盖、不能删除**。如果容器设了 `TRANSFORMERS_CACHE`，env_dict 无法 unset 它。
+某些 server launcher 做 `env = os.environ.copy(); env.update(self.env_dict)`——**只能覆盖、不能删除**。如果容器设了 `TRANSFORMERS_CACHE`，env_dict 无法 unset 它。
 
-**解法**：在启动 server 的 bash 脚本里 `unset` 这两个变量，或在调起 OmniServer 之前 `os.environ.pop("TRANSFORMERS_CACHE", None)`。
+**解法**：在启动 server 的 bash 脚本里 `unset` 这两个变量，或在 launch 之前 `os.environ.pop("TRANSFORMERS_CACHE", None)`。
 
 ### 历史踩坑
 
-- 2026-04-22 GEBench DiffusionWorker 找不到模型（`TRANSFORMERS_CACHE` 覆盖）
-- 2026-04-27 server 600s 超时 GPU 0 MiB（`HF_HUB_CACHE` 覆盖）
+- server 启动后 GPU 全程 0 MiB、600s timeout 崩（`HF_HUB_CACHE` 覆盖 → 模型从未加载）
+- benchmark worker 找不到模型（`TRANSFORMERS_CACHE` 覆盖 → 路径指向容器临时路径）
 
 ## 3. docker exec chdir permission denied → 先 cd 到匹配宿主路径
 

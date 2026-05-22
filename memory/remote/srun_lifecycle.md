@@ -12,9 +12,9 @@ type: rule
 
 ### 踩过的坑（2026-04-21）
 
-- 上午 srun 到 0006 + 进 `<YOUR_CONTAINER>` 容器跑 pytest gebench
+- srun 进计算节点 + 进容器跑测试
 - srun 被打断，shell 退出
-- 容器里 `vllm_omni serve` + 4 个 Worker_TP + 若干 multiproc 子进程**全都留着**
+- 容器里 server 进程 + worker 子进程 + multiproc 子进程**全都留着**
 - **GPU 0 被占 67GB 一整天**
 - 下午另一个用户 srun 上来发现 "说好的空卡呢？" → **同事投诉**
 
@@ -24,17 +24,17 @@ type: rule
 
 ```bash
 # 在 docker exec 进去的 bash 里
-ps -eo pid,cmd | grep -E "vllm|Worker_TP|StageEngine|multiprocessing.spawn" | grep -v grep
+ps -eo pid,cmd | grep -E "<your-process>|multiprocessing.spawn" | grep -v grep
 ```
 
 看到任何进程就清：
 
 ```bash
 # 优雅清（先 TERM 再 KILL）
-pkill -TERM -f 'vllm_omni.entrypoints' ; sleep 3 ; pkill -9 -f 'vllm_omni|Worker_TP|StageEngine'
+pkill -TERM -f '<your-process>.entrypoints' ; sleep 3 ; pkill -9 -f '<your-process>'
 
 # 验证
-ps -eo pid,cmd | grep -E "vllm|Worker_TP" | grep -v grep
+ps -eo pid,cmd | grep -E "<your-process>" | grep -v grep
 # 应该空
 ```
 
@@ -56,7 +56,7 @@ docker top <YOUR_CONTAINER>
 
 ```bash
 # 注意 -w / 绕过 cwd permission denied
-docker exec -w / <container_id> bash -c 'pkill -9 -f "vllm_omni|Worker_TP"'
+docker exec -w / <container_id> bash -c 'pkill -9 -f "<your-process>"'
 
 # 验证
 nvidia-smi --query-gpu=index,memory.free --format=csv,noheader
@@ -69,7 +69,7 @@ nvidia-smi --query-gpu=index,memory.free --format=csv,noheader
 `docker exec` 进容器后第一件事：
 
 ```bash
-trap 'pkill -9 -f "vllm_omni|Worker_TP|StageEngine" 2>/dev/null' EXIT
+trap 'pkill -9 -f "<your-process>" 2>/dev/null' EXIT
 ```
 
 bash 退出（包括 `exit` 或父 ssh 断开）时自动清子进程。但**仅当这个 bash 是容器里所有 vllm 进程的祖先**时才有效；如果 vllm 是 `nohup`/`&` 脱离 shell 的就不中用。
@@ -82,7 +82,7 @@ bash 退出（包括 `exit` 或父 ssh 断开）时自动清子进程。但**仅
 
 退 srun 之前问自己：
 
-1. **容器里 `ps -eo cmd | grep vllm` 是空的吗？** → 不空就 pkill
+1. **容器里 `ps -eo cmd | grep <your-process>` 是空的吗？** → 不空就 pkill
 2. **宿主 `nvidia-smi` 上的 GPU 内存是 0% 吗？** → 不是就去找哪个 pid 还在占
 3. **如果我现在 exit，下一个 srun 上来看到的是什么？** → 干净才能退
 
@@ -124,9 +124,8 @@ bash 退出（包括 `exit` 或父 ssh 断开）时自动清子进程。但**仅
 
 ### 反面教训
 
-2026-04 在 0036 上：
 - 申请 2 卡被分到 GPU 0/1（只剩 10GB 空闲，80B bf16 跑不动）
-- 卡 5/6/7 全空（每张 81GB），但我一开始没想过去用
+- 节点上其他卡全空（每张 81GB），但一开始没想过去用
 - 用户提醒："没4卡就申请2卡，然后进容器偷卡"
 
 **记住这个模式：申请保底卡数 → 进容器看全景 → 偷空闲卡**。

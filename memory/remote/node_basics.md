@@ -1,12 +1,12 @@
 ---
-name: 进陌生远端节点的通用流程 / 香港机器源选择 / PYTHONPATH 跑别人 editable install
-description: 进新节点先 docker inspect + 查文件系统不假设；香港节点直连 PyPI 不用清华源；共享 venv 别人 editable install 时用 git worktree + PYTHONPATH 前置不污染对方
+name: 进陌生远端节点的通用流程 / PYTHONPATH 跑别人 editable install
+description: 进新节点先 docker inspect + 查文件系统不假设；共享 venv 别人 editable install 时用 git worktree + PYTHONPATH 前置不污染对方
 type: feedback
 ---
 
 ## 1. 进陌生远端节点的正确流程
 
-**错误示范（我犯过的）**：假设新节点路径结构和之前节点一样，直接 `cd /app/vllm-omni` 或 `source <YOUR_REMOTE_WORKDIR>/.venv/bin/activate`，全部踩空。
+**错误示范（我犯过的）**：假设新节点路径结构和之前节点一样，直接 `cd /app/<your-framework>` 或 `source <YOUR_REMOTE_WORKDIR>/.venv/bin/activate`，全部踩空。
 
 ### 正确顺序
 
@@ -42,12 +42,12 @@ find /home /scratch -maxdepth 4 -name "models--*" -type d 2>/dev/null | head
 
 **模型缓存 160GB，能复用绝不重下**。
 
-#### 1.4 节点上有没有现成的 vllm-omni clone 和 venv
+#### 1.4 节点上有没有现成的框架 clone 和 venv
 
 ```bash
-find /home/<YOUR_GROUP>/<user> -maxdepth 3 -name vllm-omni -type d 2>/dev/null
-ls /app/vllm-omni/.venv 2>/dev/null
-which python   # 容器里可能是 /app/vllm-omni/.venv/bin/python
+find /home/<YOUR_GROUP>/<user> -maxdepth 3 -name <your-framework> -type d 2>/dev/null
+ls /app/<your-framework>/.venv 2>/dev/null
+which python   # 容器里可能是 /app/<your-framework>/.venv/bin/python
 ```
 
 #### 1.5 容器权限问题
@@ -63,47 +63,9 @@ which python   # 容器里可能是 /app/vllm-omni/.venv/bin/python
 - **不要**假设节点路径结构。每个节点不一样
 - **不要**依赖容器内的 `~/.cache`，写 Lustre 才持久
 
-## 2. 香港机器：直连 PyPI，不要清华源
+## 2. 别人的 editable install：worktree + PYTHONPATH 前置
 
-### 规则
-
-- **默认 PyPI 直连**：`pypi.org` 连得很快
-- **不要用清华源**：`pypi.tuna.tsinghua.edu.cn` 在香港机器上**反而慢**（香港 → 北京 → 清华 → 香港，反向绕路）
-- **不要用阿里云源**：同理
-
-### 容器里 pip 配置可能是遗留
-
-`pip config list` 如果显示 `global.index-url='https://pypi.tuna.tsinghua.edu.cn/simple'`，那是镜像拉自国内集群的老配置遗留，**在香港节点上应当无视或覆盖**：
-
-```bash
-# 好：直连 pypi
-uv pip install --index-strategy unsafe-best-match <pkg>
-pip install --index-url https://pypi.org/simple <pkg>
-
-# 坏：绕路清华
-uv pip install --index-url https://pypi.tuna.tsinghua.edu.cn/simple <pkg>
-pip install <pkg>  # 如果 pip.conf 是清华
-```
-
-### 数据点
-
-- 装 `mmengine`：清华源挂起 60+ 秒不动 → Ctrl-C；默认 pypi **3.82 秒** 装完
-- 装 `open_clip_torch + clip-benchmark`（5 个包）：默认 pypi ~20 秒
-
-### 踩坑教训：装包慢先怀疑源，不要怀疑包
-
-**症状**：`uv pip install X` 卡 60 秒无输出，我以为是 uv 在解依赖
-**真相**：是 pypi.tuna 清华源在香港连接慢；切 pypi.org 3.82 秒完成
-**教训**：命令行装包不动，第一反应**换源**（pypi.org），不要去 Ctrl-C 然后换工具（pip vs uv）——**工具不是问题，源才是问题**
-
-### 推论
-
-- HF 下载同理，`hf download` 默认直连 `huggingface.co`，在香港直连最快，不要设镜像
-- `apt install` 同理，默认 `archive.ubuntu.com` 或 docker image 预设的源通常 OK
-
-## 3. 别人的 editable install：worktree + PYTHONPATH 前置
-
-远端 `/rebase/.venv/bin/python` 这种共享 venv 里 vllm_omni 经常是别人活跃 checkout 的 editable install（典型在 `/mnt/scratch/wt-pr<n>/`），上面可能有别人 mid-edit 的脏文件，**不能直接 patch**。
+远端共享 venv 里的框架包经常是别人活跃 checkout 的 editable install（典型在 `/mnt/scratch/wt-pr<n>/`），上面可能有别人 mid-edit 的脏文件，**不能直接 patch**。
 
 ### 套路
 
@@ -113,8 +75,8 @@ pip install <pkg>  # 如果 pip.conf 是清华
    ```bash
    PYTHONPATH=/mnt/scratch/wt-<my-feature>:$PYTHONPATH python -m pytest <test_path> -v
    ```
-   Python 找包按 sys.path 顺序，前置自己的目录 → 我的 `vllm_omni/...` 模块文件先被找到，editable install 里的同名模块被屏蔽
-4. **验证生效**：`python -c "import vllm_omni.X; print(vllm_omni.X.__file__)"` 必须打印自己 worktree 路径，不是 `/mnt/scratch/wt-pr<n>/...`
+   Python 找包按 sys.path 顺序，前置自己的目录 → 我的 `<your-package>/...` 模块文件先被找到，editable install 里的同名模块被屏蔽
+4. **验证生效**：`python -c "import <your-package>.X; print(<your-package>.X.__file__)"` 必须打印自己 worktree 路径，不是 `/mnt/scratch/wt-pr<n>/...`
 
 ### 适用范围
 
@@ -125,6 +87,6 @@ pip install <pkg>  # 如果 pip.conf 是清华
 
 ### 反例（不要做）
 
-- 直接 `vim /mnt/scratch/wt-pr<n>/vllm_omni/...` 改对方 working tree
+- 直接 `vim /mnt/scratch/wt-pr<n>/<your-package>/...` 改对方 working tree
 - `pip install -e .` 自己的 worktree 覆盖对方的 editable
 - rsync 整个本地 worktree 上去——会把本地未 commit 的脏文件、pyc 缓存、IDE 配置全推过去

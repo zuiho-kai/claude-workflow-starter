@@ -7,7 +7,7 @@ metadata:
 
 # Algorithm-level 决策前先 grep upstream
 
-PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_3.py` 就在 `D:\vllm-omni\hunyuan3.0_ins\` 下，**距离一次 grep 的距离**，我没读，靠 trace 现场反推方案，结果跟 upstream 设计哲学背道而驰。reviewer 一句 "ref upstream line 3290" 把方案打回原形。
+多次 PR review 复盘。upstream 源码就在 repo 里，**距离一次 grep 的距离**，没读，靠 trace 现场反推方案，结果跟 upstream 设计哲学背道而驰。reviewer 一句"ref upstream line N"把方案打回原形。
 
 派生自 [[P1 证据先行]]。是 [B7] 的精神扩展——B7 字面只管"测 baseline 前 grep README"，这条把它扩到所有 algorithm 决策。
 
@@ -16,7 +16,7 @@ PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_
 ## 规则
 
 **触发器**：准备做以下任一类决策
-- AR stop token / EOS / sampling 策略选择
+- stop token / EOS / sampling 策略选择
 - 特殊 token（control token / placeholder / trigger tag）处理
 - generate loop 行为（forced emission / logits processor / stage transition）
 - KV cache 切片 / snapshot 触发点 / reuse 长度
@@ -24,7 +24,7 @@ PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_
 
 **强制**：
 1. `find $UPSTREAM_REPO -name "modeling_*.py" -o -name "generation_*.py" -o -name "tokenization_*.py"` 找主入口文件
-2. grep 关键概念名（`final_stop_tokens` / `EOS_TOKEN_ID` / `_stage_transitions` / `apply_chat_template` 等）
+2. grep 关键概念名（`stop_tokens` / `EOS_TOKEN_ID` / `stage_transitions` / `apply_chat_template` 等）
 3. **读完相关函数体**才动手设计
 
 **禁止**：
@@ -34,33 +34,22 @@ PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_
 
 ---
 
-## Why（PR #3444 实测）
+## Why（实测）
 
-发现 AR `<answer>` stop 太早砍掉 size/ratio tail → 我直接换 `<|endoftext|>`，理由"让 AR 走完 forced tail 直到自然 EOS"。
+发现 stage A stop 太早砍掉某个 tail → 直接换成宽松 stop token，理由"让 stage A 走完 forced tail 直到自然 EOS"。
 
-**upstream 实际做法**（`modeling_hunyuan_image_3.py:3289-3303`）：
-```python
-if need_ratio:
-    final_stop_tokens = list(range(tkw.start_ratio_token_id, tkw.end_ratio_token_id + 1))
-    for start, end in getattr(tkw, "ratio_token_other_slices", []):
-        final_stop_tokens.extend(range(start, end))
-```
-**停在 ratio token 本身**，配 `_ConditionalSliceVocabLogitsProcessor` 强制下一个 token 落 ratio 区间。AR 自然轨迹 `</recaption><answer><boi><img_size><img_ratio_X>` ←停在最后这个。
+**upstream 实际做法**：stop 在特定 token 本身，配 logits processor 强制下一个 token 落到正确区间。stage A 的自然轨迹在某个 control token 处就终止。
 
-我的 `<|endoftext|>` 方案让 AR **白跑 5 个 decode step**（emit `<answer><boi><img_size><img_ratio><eos>` 才停）。
-
-PR #3444 reviewer Bounty-hunter 第一条 review 就是 "seem not correct, can you ref upstream line 3290 and run comparative experiment" —— 一句话戳穿。
+我的方案让 stage A 白跑 5 个额外 decode step。reviewer 第一条 review 直接戳穿："ref upstream line N and run comparative experiment"。
 
 ---
 
 ## How to apply
 
-**会话开头**：列项目 reference repo 路径（`hunyuan3.0_ins/`、HF transformers 等），算作"可直接 grep 的 source of truth"。
-
 **改 prompt_utils / sampling / stop tokens 前**：
 
 ```bash
-grep -rn "final_stop_tokens\|stop_token\|EOS\|eos_token_id" $UPSTREAM_REPO/modeling_*.py | head
+grep -rn "stop_token\|EOS\|eos_token_id" $UPSTREAM_REPO/modeling_*.py | head
 ```
 
 **改 KV cache 切片 / snapshot 前**：
@@ -81,24 +70,20 @@ grep -rn "kv_cache\|snapshot\|reuse_len" $UPSTREAM_REPO/modeling_*.py | head
 
 ---
 
-## "Upstream" 包含本仓库内的同模型工具类（PR #3626 教训）
+## "Upstream" 包含本仓库内的同类工具类
 
 **触发**：加 utility / helper / 纯 Python 复刻**前**。
 
-**强制 grep**：`grep -rn "<同名函数或同概念>" vllm_omni/ <upstream_repo>/`，**两边都查**。仓库里已有的 ResolutionGroup / Processor / Sampler 等同模型类**就是 upstream**——它们已经把上游算法对齐过一次了，你再写第三份纯 Python 复刻 = 三处需要同步的源码漂移。
+**强制 grep**：`grep -rn "<同名函数或同概念>" src/ <upstream_repo>/`，**两边都查**。仓库里已有的同类 Processor / Sampler / Group 等**就是 upstream**——它们已经把上游算法对齐过一次了，再写第三份纯 Python 复刻 = 三处需要同步的源码漂移。
 
-PR #3626 实测：我在 `prompt_utils.py` 加了 `_build_reso_group_ratios`，仓库里已有的：
-- `vllm_omni/diffusion/models/hunyuan_image3/hunyuan_image3_transformer.py:ResolutionGroup._calc_by_step`
-- `vllm_omni/model_executor/models/hunyuan_image3/hunyuan_image3.py:HunyuanImage3Processor.ResolutionGroup._calc_by_step`
+**实测**：我加了 `_build_reso_group_ratios`，仓库里已有两处同概念实现。reviewer 一句"可以复用吗？"直接戳穿。
 
-reviewer 一句 "_build_resolutions_by_step，可以复用吗？" 直接戳穿。**这两份已经在那了，我没 grep**。
-
-"模块标 lightweight / no-torch 所以不能 reuse" 不是借口：算法可以**移到持有数据的那一层**（AR 模型 `__init__`），重 import 在那一层本来就 OK。约束应该指向"在哪做"，不应该被偷换成"再造一份"。
+"模块标 lightweight / no-torch 所以不能 reuse" 不是借口：算法可以**移到持有数据的那一层**，重 import 在那一层本来就 OK。约束应该指向"在哪做"，不应该被偷换成"再造一份"。
 
 **派生规则**：加工具函数前必跑：
 ```bash
-grep -rn "<algorithm-name>\|<key-concept>" vllm_omni/ scripts/
-grep -rn "<algorithm-name>\|<key-concept>" hunyuan3.0_ins/  # or other reference repo
+grep -rn "<algorithm-name>|<key-concept>" src/ scripts/
+grep -rn "<algorithm-name>|<key-concept>" <upstream_repo>/
 ```
 **两边都返回非空 → 必须先回答"为什么不 reuse"再动笔**。
 
@@ -106,7 +91,5 @@ grep -rn "<algorithm-name>\|<key-concept>" hunyuan3.0_ins/  # or other reference
 
 ## 链接
 
-- PR #3444 review iteration：[[hunyuan_kv_reuse_orchestrator]]（review iteration 段）
-- PR #3626 review iteration：[[reviewer_lens_audit]]（4 条评论同一根因）
-- 相邻：[[hf_alignment_pitfalls]]（HF model 接入时 grep README/demo）
+- 相邻：[[reviewer_lens_audit]]（duplication audit 章节）
 - 派生硬规则：CLAUDE.md B30
