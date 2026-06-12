@@ -1,5 +1,7 @@
 # Profiling
 
+Profiling is a state machine. Do not collapse service readiness, request completion, trace export, profiler shutdown, benchmark wrapper exit, local artifact save, and resource cleanup into one vague "done".
+
 ## Scope
 
 A profiling run needs:
@@ -10,6 +12,8 @@ A profiling run needs:
 - profiler output directory
 - trace quality checks
 - cleanup plan
+
+For graph or compiled execution, first prove the pure graph path with the smallest variable set. Add profiler instrumentation only after health check, one-request smoke, and formal benchmark path are understood.
 
 ## Probe Discipline
 
@@ -25,3 +29,56 @@ Before interpreting a trace, confirm:
 - metric counters are nonzero for the reported metric
 
 Empty traces, zero-count metrics, and startup-only captures are invalid evidence.
+
+## Request-Window Capture
+
+For endpoint-controlled profilers, capture the workload window explicitly:
+
+1. Confirm the service is healthy and profiler endpoints/routes are enabled.
+2. Start profiling.
+3. Run the exact target request or benchmark workload.
+4. Stop profiling immediately after the target workload completes.
+5. Verify trace files and metric counters before interpreting them.
+
+Bounded smoke traces can prove profiler plumbing, rank coverage, and export logic. They do not prove full-request performance unless the capture window covers the real request.
+
+## Status States
+
+Report progress with these states:
+
+| State | Evidence |
+| --- | --- |
+| service ready | health check succeeds; profiler run also has profiler routes enabled |
+| request done | target endpoint returned success or benchmark progress reached 100% |
+| trace exported | expected trace files exist and sizes are stable |
+| profiler stopped | stop endpoint/log succeeded |
+| benchmark done | benchmark wrapper exited and result file exists |
+| local artifact saved | archive and extracted trace files exist locally |
+| resources released | this run's process group is gone and GPU/port/process checks are clean |
+
+If only some states are true, say exactly which ones are complete.
+
+## Trace Quality Gate
+
+Before delivery, summarize trace quality from the trace itself:
+
+- file sizes
+- event counts
+- rank/worker coverage
+- process/thread counts when relevant
+- top event categories
+- presence of CPU ops, Python functions, CUDA runtime/kernel events, communication events, or framework-specific events required by the task
+
+Do not treat empty stack files as a standalone failure; inspect event categories and names. Conversely, do not treat "a trace file exists" as success when it lacks the categories needed for the user's question.
+
+## Artifact And Cleanup Order
+
+Recommended order:
+
+1. Confirm remote trace/result files exist.
+2. Create a single archive and list its contents.
+3. If resources are scarce, release the service process group after archive verification.
+4. Download and extract the archive locally.
+5. Re-check remote processes, ports, scheduler state, and GPU memory.
+
+Final reports should include artifact paths and resource-release evidence. A successful profiler stop is not the same as resource cleanup.

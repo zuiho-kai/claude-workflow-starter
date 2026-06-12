@@ -6,9 +6,9 @@
 | 文件 | 一句话 |
 |------|--------|
 | [execution_principles.md](execution_principles.md) | 简单方案优先 / 用户给方案直接执行 / 已知结论直接用——执行类合集 |
-| [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark 先锁 scope |
+| [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark 先锁 scope；公开同步只保留机制层 |
 | [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up 的提交前路由 |
-| [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：先侦察、本地试错、不走 git 部署循环、tmux/docker exec 引号陷阱 |
+| [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：侦察、fail-fast cleanup、profiling 状态机、trace quality gate |
 
 ## 调试方法论 / 接 HF 模型
 | 文件 | 一句话 |

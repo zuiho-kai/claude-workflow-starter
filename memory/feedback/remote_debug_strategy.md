@@ -12,7 +12,7 @@ This file is only a router. Remote tasks should open the matching topic first.
 | --- | --- |
 | New machine or environment reconnaissance, cache checks, tmux/SSH command shape | [basics.md](remote_debug_strategy/basics.md) |
 | Serving or benchmark startup gates, watchdogs, cleanup, ownership of failures | [serving_failfast_cleanup.md](remote_debug_strategy/serving_failfast_cleanup.md) |
-| Graph/profiling runs on shared machines, profiler config, trace quality | [profiling.md](remote_debug_strategy/profiling.md) |
+| Graph/profiling runs on shared machines, request-window capture, trace quality, artifact/resource cleanup | [profiling.md](remote_debug_strategy/profiling.md) |
 
 Hard-rule summary:
 
