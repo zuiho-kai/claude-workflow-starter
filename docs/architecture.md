@@ -1,92 +1,40 @@
-# vLLM-Omni 核心架构
+# Project Architecture Notes
 
-## 架构速览
+Use this file as the public template for project-specific architecture facts. Keep secrets, hostnames, private model names, customer names, and local absolute paths out of the committed version.
 
-- **用户入口**：`vllm_omni/entrypoints/omni.py` + `omni_base.py`
-  - `Omni(model=..., stage_configs_path=...)`
-  - **不要传 `mode=`，没这个参数**，路由完全由 YAML 决定
-- **多 stage 编排**：通过 YAML 串起来（`vllm_omni/model_executor/stage_configs/*.yaml`）
-  - 每个 stage 是 `llm`（AR 自回归）或 `diffusion`（扩散去噪）类型
-  - `engine/orchestrator.py` + `engine/async_omni_engine.py` 负责跨 stage 请求路由
-- **模型执行**：
-  - `model_executor/models/`：LLM 风格模型（VLM / 多模态理解），用 vLLM 引擎跑
-  - `diffusion/models/`：扩散风格 pipeline，用 diffusion executor 跑
-- **模型注册**：
-  - `model_executor/models/registry.py` → `_OMNI_MODELS` dict
-  - `diffusion/registry.py` → `_DIFFUSION_MODELS` dict
-  - 同一个 HF arch 名可以同时在两个 registry 里注册（AR 侧 + diffusion 侧）
-- **Stage 间数据搬运**：
-  - `model_executor/stage_input_processors/<model>.py` 提供 `ar2diffusion(...)` 转换函数
-  - 被 YAML 里的 `custom_process_input_func` 字段引用
-- **Stage config 自动发现**：
-  - `config/stage_config.py` → `StageConfigFactory._ARCHITECTURE_MODELS` dict
-  - 根据 HF config.json 的 `architectures` 字段自动匹配 YAML
+## Entrypoints
 
-## HunyuanImage-3.0 代码地图
+- CLI:
+- API/server:
+- Batch/offline workflow:
+- Tests or smoke commands:
 
-### AR 侧（model_executor）
-- 主模型：`vllm_omni/model_executor/models/hunyuan_image3/hunyuan_image3.py`
-  - `HunyuanImage3ForConditionalGeneration`：主类，含 multimodal processor、mRoPE 替换、VAE+ViT encoder
-  - `HunyuanModel`：继承 vLLM 的 `HunYuanModel`，加了 QKV split 和 MoE expert mapping
-  - `HunyuanImage3MultiModalProcessor`：处理 `<img>` 占位符展开
-  - `HunyuanImage3RotaryEmbedding`：自定义 interleaved 2D mRoPE
-- 视觉编码：`vllm_omni/model_executor/models/hunyuan_image3/siglip2.py`
-- VAE：`vllm_omni/model_executor/models/hunyuan_image3/autoencoder_kl_3d.py`
+## Ownership Map
 
-### Diffusion 侧
-- Pipeline：`vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py`
-- DiT Transformer：`vllm_omni/diffusion/models/hunyuan_image3/hunyuan_image3_transformer.py`
-- Tokenizer：`vllm_omni/diffusion/models/hunyuan_image3/hunyuan_image3_tokenizer.py`
-- VAE wrapper：`vllm_omni/diffusion/models/hunyuan_image3/autoencoder.py`
-- MoE dispatch：`vllm_omni/diffusion/models/hunyuan_image3/hunyuan_fused_moe.py`
+| Area | Owner module | Notes |
+| --- | --- | --- |
+| Request parsing | `<path>` | Normalize external fields here. |
+| Scheduling/orchestration | `<path>` | Owns lifecycle and state transitions. |
+| Model or core algorithm | `<path>` | Owns semantic decisions. |
+| Output formatting | `<path>` | Owns public response schema. |
 
-### Stage 配置
-- I2T（图像→文字）：`vllm_omni/model_executor/stage_configs/hunyuan_image3_i2t.yaml`
-- IT2I（图像+文字→图像）：`vllm_omni/model_executor/stage_configs/hunyuan_image3_it2i.yaml`
-- T2I（纯 DiT）：`vllm_omni/model_executor/stage_configs/hunyuan_image3_t2i.yaml`
+## Contracts
 
-### Stage 间衔接
-- `vllm_omni/model_executor/stage_input_processors/hunyuan_image3.py` → `ar2diffusion()`
+For every public field, config key, or cross-module bridge, record:
 
-### 示例
-- `examples/offline_inference/hunyuan_image3/image_to_text.py`
-- `examples/offline_inference/hunyuan_image3/image_to_image.py`
+- Ingress:
+- Normalization:
+- Owner:
+- Consumer:
+- Failure mode:
+- Tests/docs:
 
-## 命名约定
+## Known Boundaries
 
-- **统一拼写**：`hunyuan_image3`（无下划线）
-- **绝对不要**再引入 `hunyuan_image_3` 这种下划线变体
-- HF arch 名：`HunyuanImage3ForCausalMM`（HF config.json 里的，不能改）
-- omni 内部主类名：
-  - AR 侧：`HunyuanImage3ForConditionalGeneration`
-  - Diffusion 侧：`HunyuanImage3Pipeline`
+- What must stay in the framework layer:
+- What must stay in model or algorithm owner code:
+- What is project-specific and should not be generalized:
 
-## 常见雷区
+## Local Setup
 
-1. `Omni()` 不接受 `mode=` 参数，路由通过 YAML 决定
-2. AR stage YAML 里 `engine_output_type` 必须和实际产出匹配：
-   - I2T 用 `text` 或不写（默认）
-   - IT2I 用 `latent`
-   - 搞错会让 stage 间数据搬不动
-3. `HunyuanModel.load_weights` 维护一份 `unexpected_keywords` 跳过名单（line ~159）。上游模型改组件名时这里不会报错，会**静默丢权重**——加新组件时务必同步这个名单
-4. mRoPE 通过 `_replace_rotary_embeddings()` 猴补丁替换层内 `rotary_emb`，加新层时要确保它能被 patch 到
-5. VAE / Vision encoder 在 model_executor 侧和 diffusion 侧都有一份，**不要单边修**
-6. `pipeline_hunyuan_image3.py:91-92` 硬断言 `img_proj_type=="unet"`，只支持一种投影类型
-7. `autoencoder.py:26` 的 `NotImplementedError` 在 latent 维度不是 3/4/5 时触发，无上下文信息
-
-## 参考实现对照
-
-| 场景 | 参考标杆 | 文件 |
-|------|---------|------|
-| I2T blessed pattern | Qwen2.5-Omni Thinker | `model_executor/models/qwen2_5_omni/qwen2_5_omni_thinker.py` |
-| IT2I 多 stage | GLM-Image | `model_executor/models/glm_image/glm_image_ar.py` + `stage_input_processors/glm_image.py` + `stage_configs/glm_image.yaml` |
-| 上游源码 | HunyuanImage-3.0-Instruct | `D:/vllm-omni/hunyuan3.0_ins/` |
-
-## 跑 IT2I 的最小命令
-
-```bash
-cd vllm-omni
-python examples/offline_inference/hunyuan_image3/image_to_image.py \
-    --image cherry_blossom.jpg \
-    --prompt "Make the petals neon pink"
-```
+Put real machine details in gitignored files such as `docs/remote_server.md`, not here.

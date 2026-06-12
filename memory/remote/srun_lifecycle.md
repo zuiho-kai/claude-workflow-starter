@@ -72,7 +72,7 @@ nvidia-smi --query-gpu=index,memory.free --format=csv,noheader
 trap 'pkill -9 -f "<your-process>" 2>/dev/null' EXIT
 ```
 
-bash 退出（包括 `exit` 或父 ssh 断开）时自动清子进程。但**仅当这个 bash 是容器里所有 vllm 进程的祖先**时才有效；如果 vllm 是 `nohup`/`&` 脱离 shell 的就不中用。
+bash 退出（包括 `exit` 或父 ssh 断开）时自动清子进程。但**仅当这个 bash 是容器里所有项目进程的祖先**时才有效；如果服务是 `nohup`/`&` 脱离 shell 的就不中用。
 
 #### 方法 2：pytest 而非手动启 server
 

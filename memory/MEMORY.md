@@ -4,6 +4,6 @@
 
 | 目录 | 何时来翻 |
 |------|----------|
-| [feedback/](feedback/_index.md) | **每次会话开头扫一眼**——执行原则、远端调试策略、对齐 PR 调试踩坑 |
+| [feedback/](feedback/_index.md) | **每次会话开头扫一眼**——执行原则、计划验证、PR 工作流、远端调试、reviewer 视角 |
 | [remote/](remote/_index.md) | SSH / docker / Slurm / 容器环境变量 / 退 srun 释放资源 |
 | [ci/](ci/_index.md) | 改 `tests/`、加 CI step、加 perf/accuracy 测试 |

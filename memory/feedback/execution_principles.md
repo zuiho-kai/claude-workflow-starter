@@ -64,16 +64,16 @@ type: feedback
 
 ## 5. IP+port 给出来直接 SSH 探，不要先问一堆
 
-When the user gives only `IP:port` for a remote server, **attempt SSH directly first** (defaults: `root@<ip> -p <port>` with the local default key + key-auth). Don't ask the user for username, password, or environment context until that probe actually fails.
+When the user gives only `IP:port` for a remote server, **attempt the documented SSH route directly first** (for example `<user>@<ip> -p <port>` with the local default key + key-auth). Don't ask the user for username, password, or environment context until that probe actually fails.
 
 **Why:** 用户原话（多次重复犯）"直接 ssh 就行"。问 6 个问题（username? password? GPU count? model path? venv ready? docker?）每个都是一行 `ssh '...'` 的事。
 
-**How to apply:** First contact with a fresh remote → run `ssh -o StrictHostKeyChecking=no -p <port> root@<ip> 'hostname && nvidia-smi -L && pwd && ls'`（或类似单条合并探针）。Only ask the user when:
+**How to apply:** First contact with a fresh remote → run `ssh -o StrictHostKeyChecking=no -p <port> <user>@<ip> 'hostname && nvidia-smi -L && pwd && ls'`（或类似单条合并探针）。Only ask the user when:
 - SSH probe returns `Permission denied` for both publickey and password
 - The user explicitly asks for help configuring the connection
 - An action is irreversible / risky — that warrants confirmation regardless
 
-任何用户**直接给出**的 IP+port = `ssh root@<ip> -p <port> '<combined probe>'` 是 FIRST action，不是先问。问题只在 `Permission denied` / 连接拒绝 / hostname 不匹配后才问，且一次只问一个具体的，不要打包六问。
+任何用户**直接给出**的 IP+port = `ssh <user>@<ip> -p <port> '<combined probe>'` 是 FIRST action，不是先问。问题只在 `Permission denied` / 连接拒绝 / hostname 不匹配后才问，且一次只问一个具体的，不要打包六问。
 
 ## 6. 连环 dep 错误每个都是一行 sed → 继续 fix forward，别喊"系统坏了"
 

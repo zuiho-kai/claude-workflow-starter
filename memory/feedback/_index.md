@@ -1,11 +1,13 @@
 # Memory · feedback/
 
-**何时来翻**：每次会话开头扫一眼，避免重犯过的错。`execution_principles.md` + `remote_debug_strategy.md` 是高频，**先读这俩**。
+**何时来翻**：每次会话开头扫一眼，避免重犯过的错。`execution_principles.md`、`plan_and_validation.md`、`pr_workflow.md`、`remote_debug_strategy.md` 是高频入口。
 
 ## 协作 / 执行原则
 | 文件 | 一句话 |
 |------|--------|
 | [execution_principles.md](execution_principles.md) | 简单方案优先 / 用户给方案直接执行 / 已知结论直接用——执行类合集 |
+| [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark 先锁 scope |
+| [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up 的提交前路由 |
 | [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：先侦察、本地试错、不走 git 部署循环、tmux/docker exec 引号陷阱 |
 
 ## 调试方法论 / 接 HF 模型

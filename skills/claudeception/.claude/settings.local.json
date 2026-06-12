@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Skill(continuous-learning)",
-      "Skill(test-nested-parent)"
-    ]
-  }
-}

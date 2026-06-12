@@ -1,6 +1,6 @@
 # Claude Code Workflow Starter
 
-一个**通用的 Claude Code 工作流模板**：宪法 + 60+ 条硬规则 + 飞轮自动积累。**直接拿去用**，不用学不用配，飞轮自动转。
+一个**通用的 Claude Code 工作流模板**：入口规则 + memory/error book + 自动反思飞轮。目标是让 agent 跨会话保留项目约束，同时把私有机器、客户、模型和凭证留在 gitignored 文件里。
 
 ## 谁该用
 
@@ -13,21 +13,21 @@
 ### Step 1: clone 这个 starter
 
 ```bash
-git clone https://github.com/zuiho-kai/claude-workflow-starter-public.git
+git clone https://github.com/zuiho-kai/claude-workflow-starter.git
 ```
 
 ### Step 2: 把你的项目代码放进来
 
 ```bash
-cd claude-workflow-starter-public
+cd claude-workflow-starter
 git clone <your-project-repo>
 ```
 
 `CLAUDE.md` / `memory/` / `.claude_errors/` / `.claude/hooks/` / `skills/` 已经在 starter 根目录，Claude Code 在这个目录下启动就会自动读到。
 
-### Step 3: 填项目国策（CLAUDE.md E 节）
+### Step 3: 填项目架构边界
 
-CLAUDE.md 的「E. 架构国策」是占位，填你项目的硬性架构约束（"改 X 不改 Y" / "新增 op 必先 grep Z" 这类）。比通用规则更高优先级，会被 Claude 优先遵守。
+把项目的入口、owner、contract 和禁区写进 `docs/architecture.md`。如果某条约束每次开工都必须先看到，再提升到 `CLAUDE.md`。
 
 ### Step 4: 填远端服务器信息（如果用远端 GPU）
 
@@ -85,9 +85,10 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 | 资产 | 用途 |
 |------|------|
-| `CLAUDE.md` | 宪法 P1-P8 + 60+ 条硬规则（A 远端 / B 调试 / C CI / D Git / E 项目占位 / F 编码）+ 索引 |
+| `CLAUDE.md` | P1-P9 原则 + 高频硬门禁 + 下钻索引 |
 | `memory/` | 常识 book —— 跨会话方法论（按主题分子目录，见 `memory/MEMORY.md`） |
-| `.claude_errors/` | error book —— 踩坑地册（开仓时附带通用 case，你踩到坑写进去；飞轮自动积累） |
+| `.claude_errors/` | error book —— 踩坑地册；默认只带格式说明，你踩到坑再写进去 |
+| `docs/architecture.md` | 项目架构和 contract 模板，不放私有机器或客户信息 |
 | `docs/remote_server.template.md` | 远端 GPU 服务器连接指南模板（首次复制为 `remote_server.md` 后填） |
 | `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command）+ `reflect-review.md` |
 | `.claude/hooks/stop-gate.sh` | **核心自动化**：每次 turn 结束触发飞轮 |
@@ -100,17 +101,17 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 ## 为什么这么设计
 
-**宪法 → 硬规则 → memory/errors 三层**：
+**原则 → 硬门禁 → memory/errors 三层**：
 
-- 宪法 8 条（P1-P8）是 why 层，规则未覆盖的新场景先回这层推
-- 60+ 条硬规则是 P1-P8 在具体场景的派生，每条标注 `[Pn 派生]` 双向可查
-- memory / .claude_errors 是 rationale + 实战案例库，规则末尾的链接点过去
+- P1-P9 是 why 层，规则未覆盖的新场景先回这层推
+- `CLAUDE.md` 只保留高频硬门禁和路由，不塞长事故复盘
+- `memory/` 放可复用方法论，`.claude_errors/` 放第一次踩到的坑
 
 **飞轮自带升级路径**：
 
 - 第一次踩坑 → 写到 `.claude_errors/<topic>.md`
 - 第二次踩同坑 → 升级到 `memory/<topic>.md` 作为常识
-- 第三次或者影响范围大 → 升级到 `CLAUDE.md` 硬规则（**必须标 P1-P8 派生**）
+- 第三次或者影响范围大 → 升级到 `CLAUDE.md` 硬规则（必须能追溯到 P1-P9）
 
 这就是飞轮自己转大的方式。
 
@@ -120,7 +121,7 @@ cp docs/remote_server.template.md docs/remote_server.md
 
 如果你做远端 GPU 调试（SSH + Slurm + Docker + 共享 FS 跑大模型），重点看：
 
-- **CLAUDE.md A 节**（A1-A12）—— 远端 / 容器 / Slurm 全覆盖
+- **CLAUDE.md 2.3** —— 远端 / 容器 / 长任务硬门禁
 - **`memory/remote/`** —— `node_basics.md`（进新节点流程）、`container_setup.md`（容器持久化 + HF cache 陷阱）、`srun_lifecycle.md`（退 srun 三步走）、`ssh_workflow.md`（SSH key + retry）、`hf_offline_mandatory.md`（HF 加载必须 OFFLINE）
 - **`memory/feedback/remote_debug_strategy.md`** —— 远端调试方法论
 - **`docs/remote_server.template.md`** —— SSH/Slurm/tmux/docker 操作模板（首次使用前填 placeholder）
@@ -140,7 +141,7 @@ cp docs/remote_server.template.md docs/remote_server.md
   ```bash
   git status --ignored                       # 看哪些文件被 gitignore 拦了
   git check-ignore -v <你担心的文件>          # 验证某文件确实被忽略
-  git diff --cached | grep -iE 'password|token|<你的真实 IP>'  # 自定义 grep
+  git diff --cached | grep -iE 'password|token|<YOUR_REAL_IP>'  # 自定义 grep
   ```
 
 ---

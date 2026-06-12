@@ -21,7 +21,7 @@ export HF_DATASETS_OFFLINE=1
 
 ```python
 # Pass local absolute snapshot path instead of repo id
-model = YourFramework(model="/data/models/hub/models--<org>--<repo>/snapshots/<commit_hash>", ...)
+model = YourFramework(model="<MODEL_CACHE_ROOT>/hub/models--<org>--<repo>/snapshots/<commit_hash>", ...)
 # 而不是
 model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已有 cache，仍可能联网  # ← 哪怕 HF_HOME 指向已有 cache，仍可能联网
 ```
@@ -66,7 +66,7 @@ model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已
    exec "$@"
    ```
 
-3. **传本地绝对路径**：测试脚本里直接给 `model=` 一个 `/data/models/hub/.../snapshots/<hash>` 的具体路径，连 repo id 都不写。
+3. **传本地绝对路径**：测试脚本里直接给 `model=` 一个 `<MODEL_CACHE_ROOT>/hub/.../snapshots/<hash>` 的具体路径，连 repo id 都不写。
 
 ### 验证（每次新 venv / 新会话第一条命令）
 
@@ -82,7 +82,7 @@ env | grep -E "HF_HUB_OFFLINE|TRANSFORMERS_OFFLINE|HF_HOME"
 
 ## 历史踩坑
 
-- 新建 venv 跑 profile 脚本，只设 `HF_HOME=/data/models` 没设 offline，模型疑似触发重新下载 → 磁盘 IO + 网络拉满 → SSH `kex_exchange_identification: Connection closed by remote host`，5 分钟内连不上服务器
+- 新建 venv 跑 profile 脚本，只设 `HF_HOME=<MODEL_CACHE_ROOT>` 没设 offline，模型疑似触发重新下载 → 磁盘 IO + 网络拉满 → SSH `kex_exchange_identification: Connection closed by remote host`，短时间内连不上服务器
 - 类似坑参见 [[container_setup]] §2（cache 路径覆盖）
 
 ## 相关

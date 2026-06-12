@@ -10,7 +10,7 @@ type: reference
 WIN_SSH=/c/Windows/System32/OpenSSH/ssh.exe
 ssh_retry() {
   for i in 1 2 3 4 5; do
-    out=$($WIN_SSH -o ControlMaster=no -o ConnectTimeout=10 vllm-server "$1" 2>&1)
+    out=$($WIN_SSH -o ControlMaster=no -o ConnectTimeout=10 <remote-host-alias> "$1" 2>&1)
     [[ "$out" != *"Connection closed"* && "$out" != *"kex_exchange"* ]] && echo "$out" && return 0
     sleep 3
   done
@@ -52,13 +52,13 @@ SSH 报 `kex_exchange_identification: Connection closed by remote host` 或 `Con
 
 `Permission denied`（含 `publickey,password`）才是 auth 失败，那时候才该考虑密码/key。
 
-**Why**：曾经新拉起 Aliyun 实例 47.79.124.13:31368，前 30s sshd 未就绪，连接被立刻关。我用 `BatchMode=yes` 试了 2 次 + sleep 15s 重试 1 次就报"连不上需要密码"，被用户骂"傻逼"。其实历史 `settings.local.json` 里这个 IP 从来没存过密码，本机 `~/.ssh/id_ed25519` 早就加载，等 sshd 起完直接 key-auth 通了。
+**Why**：新拉起的实例常见现象是前 30-60s sshd 未就绪，连接在 KEX 阶段被立刻关。这个阶段还没进入认证，过早判断成密码或 key 问题会浪费排查时间。等 sshd 起完，同一条 key-auth 命令可能直接成功。
 
 **How to apply**：
 - 看到 `kex_exchange_identification` / `Connection closed` 一律按"等"处理，**不要**问用户密码
 - 新拉起的实例（用户说"新拉起的" / "新启动" / "刚开" 都是信号）首次 ssh 给 **≥60s** 缓冲，至少 retry 5 次（间隔 ≥20s）再认输
 - 触发认输条件：5 次失败仍是 KEX 错 → 才 escalate（防火墙/端口错）；任何一次报 `Permission denied` → 立刻问 key/密码
-- 历史 settings.local.json 里能 grep 到的 IP 默认 key-auth 已设好，别假设要密码
+- 如果本地 SSH config 或项目文档已经记录了该 host 的 key-auth 路径，先按既有路径重试，别先假设要密码
 
 ## 4. 操作容器：tmux send-keys（不要 SSH 直连容器）
 

@@ -100,7 +100,7 @@ scancel <job_id>
 ## 注意事项
 - 登录节点没有 docker/nvidia-smi，GPU 操作必须通过 srun 到计算节点
 - `tmux send-keys` 会直接影响用户正在看的 pane，自己开 session 用
-- AR 模型 TP4 每卡 ~41 GiB，`gpu_memory_utilization` 至少 0.9+
-- I2T YAML 里 `devices: "2,3,4,5"` 指定了 TP4 设备
-- **必须** `source .venv/bin/activate`（vllm 0.19），不要用系统 python
-- 跑测试前先 `pip install "numpy<2"`（cv2 兼容）
+- 记录你的项目需要几张卡、每卡显存和 `gpu_memory_utilization` 下限
+- 记录你的项目如何选择设备或并行度
+- **必须**激活项目 venv 或容器内约定环境，不要误用系统 python
+- 跑测试前确认项目依赖版本和本地/远端一致

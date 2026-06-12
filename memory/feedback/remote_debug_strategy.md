@@ -1,66 +1,22 @@
 ---
-name: 远端调试策略：先侦察、本地试错、不走 git 部署循环
-description: 调试 ≠ 部署、先侦察再写代码、tmux/docker exec 引号陷阱；6 轮 git commit-push-pull 循环才跑通的教训
-metadata:
-  type: feedback
+name: Remote debugging strategy routing
+description: Route remote reconnaissance, fail-fast serving, cleanup, profiling, and benchmark validation.
+type: feedback
 ---
 
-## 核心原则
+# Remote Debug Strategy Entry
 
-**git commit-push-pull 是部署手段，不是调试手段**。每轮"本地改 → push → 远端 stash → pull → run"5-10 分钟，6 轮就是 30-60 分钟。判据：你的 commit message 是 "fix attempt N" → 你在用部署流程做调试，**立刻停下来换策略**。
+This file is only a router. Remote tasks should open the matching topic first.
 
-**正确做法**：
-- 调试：远端直接写 `/tmp/test_xxx.py` 或 Python one-liner，tmux 里跑，快速迭代
-- 确认方案后：回本地写正式代码，**一次** commit-push-pull 部署
+| Scenario | Read this |
+| --- | --- |
+| New machine or environment reconnaissance, cache checks, tmux/SSH command shape | [basics.md](remote_debug_strategy/basics.md) |
+| Serving or benchmark startup gates, watchdogs, cleanup, ownership of failures | [serving_failfast_cleanup.md](remote_debug_strategy/serving_failfast_cleanup.md) |
+| Graph/profiling runs on shared machines, profiler config, trace quality | [profiling.md](remote_debug_strategy/profiling.md) |
 
-## 接入新模型/新组件前必先做环境侦察
+Hard-rule summary:
 
-**反例（2026-04-21 tokenizer 6 轮失败链）**：
-1. `AutoTokenizer.from_pretrained` → 没 `auto_map`（**没看 tokenizer_config.json**）
-2. `PreTrainedTokenizerFast.from_pretrained` → transformers 版本 bug（**没查远端版本**）
-3. `get_class_from_dynamic_module` → `HF_HUB_OFFLINE=1` 断网（**忘了离线约束**）
-4. `snapshot_download` → symlink 解析失败（**不了解 HF cache 结构**）
-5. `try_to_load_from_cache` → 依赖 `refs/main` 不存在（**同上**）
-6. 手动遍历 HF cache 目录 → 成功（**应该是第 1 步**）
-
-如果第 1 步花 5 分钟收集信息：
-```bash
-# 一次 SSH 全收集
-cat $HF_HOME/hub/models--XXX/snapshots/*/tokenizer_config.json
-ls $HF_HOME/hub/models--XXX/refs/                  # refs/main 是否存在
-ls $HF_HOME/hub/models--XXX/snapshots/*/tokenizer*
-pip show transformers | grep Version
-python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained('XXX')"
-```
-就能一次性发现所有阻塞点，直接跳到最终方案。
-
-## HF cache 结构备忘
-
-- 路径：`$HF_HOME/hub/models--{org}--{name}/snapshots/{hash}/`
-- `refs/main` 可能不存在（手动下载或旧版 CLI 不创建）
-- `try_to_load_from_cache(revision=None)` 依赖 `refs/main` → 不可靠
-- `snapshot_download` 返回的路径可能有 symlink 问题
-- **最可靠 fallback：手动遍历 snapshots/ 目录找文件**
-
-## tmux / docker exec 陷阱
-
-- **tmux 前台进程陷阱**：`python ... | tee log` 占住 shell，`send-keys` 发的命令进了进程 stdin。测试 API 必须从**另一个 window** 发请求
-- **docker exec 跨节点引号陷阱**：`ssh nodeA "docker exec $(docker ps -q) ..."` 的 `$()` 在本地展开 → 必错。解法：写脚本到 Lustre，然后 `ssh nodeA bash /shared/path/script.sh`
-- **远端发命令后必先短 sleep（≤5s）+ capture 确认脚本真启动了**（看到 pytest `collected N items` / 程序日志 / 明确错误信息），再长 sleep 等结果。光看 shell 回显不算
-- **PowerShell→SSH→bash 脚本投递陷阱**：`$VENV` / `$()` 可能被本地 PowerShell 展开，UTF-8 BOM 会污染 shebang，脚本甚至可能落成 0 字节。远端落盘后先 `wc -c` + `sed -n '1,40p'` + `bash -n`，必要时去 BOM。
-- **路径猜测陷阱**：HF snapshot 只代表权重/processor 资产，不代表 deploy yaml。写远端脚本前先 `find $WORK_DIR ... -name "*deploy*yaml"` 和 `test -f "$MODEL_CFG"`，不要假设 snapshot 下有 `deploy.yaml`。
-- **旧 PR venv/ABI 陷阱**：base commit 不一定兼容当前默认 venv。测旧 PR 先跑 base worktree 的 import/init smoke，确认 custom op / scheduler symbol / vLLM version 匹配；base 起不来时结论是 environment blocker，不是 PR 性能数据。
-
-## Plan 拆分
-
-Plan 按当前任务拆，不要把未来工作混进来。当前任务是 X 就只 plan X——过大的 plan 导致认知负担重 + 每次读 plan 烧 context。
-
-## 减少 SSH 次数
-
-每次 SSH（ASKPASS + capture-pane）~500 token，6 轮调试 × 每轮 3-5 次 = 大量浪费在重复模板。
-- 合并 SSH：一次发多条命令（`&&` 或脚本）
-- 减少 capture 频率：合理估算等待时间，不要频繁轮询
-- 复杂操作写远端脚本一次执行
-- 新终端接手远端任务时，先从当前会话/issue/PR 摘 5 行 runbook（head sha、worktree、venv、tmux、out_dir），不要把已知远端重新 `find` 一遍。
-- 已知有 `$WORK_DIR/wt-...` worktree 时，先 `git -C <dir> status` / `rev-parse HEAD` 验证事实；只有不一致才扩大搜索。
-- PowerShell 管道可能因 CRLF/BOM 让路径检查变脏；看到“文档路径不存在”这类结论，先用无 BOM/LF 聚合脚本复查。
+- Git commit-push-pull is deployment, not debugging.
+- Complex remote commands should become scripts with byte-count, preview, and syntax checks.
+- Serving and benchmark runs need fail-fast gates before sweeps.
+- Shared-machine profiling uses one control session and low-frequency status reads.
