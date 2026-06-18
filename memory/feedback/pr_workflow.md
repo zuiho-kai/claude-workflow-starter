@@ -20,4 +20,6 @@ Hard-rule summary:
 - Keep the baseline checkout clean when the project uses worktrees.
 - Push to the real PR head branch, not a branch invented locally.
 - PR evidence must bind to head SHA, run SHA, artifact path, and metric validity.
+- PR bodies and comments must stay reviewer-facing; keep private local paths, remote hosts, cache paths, ports, account names, and probe noise out of public text.
+- After rebase, cherry-pick, or conflict resolution, run fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
 - Reviewer follow-up fixes use the smallest credible edit plus targeted validation.

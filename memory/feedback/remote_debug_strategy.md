@@ -19,4 +19,6 @@ Hard-rule summary:
 - Git commit-push-pull is deployment, not debugging.
 - Complex remote commands should become scripts with byte-count, preview, and syntax checks.
 - Serving and benchmark runs need fail-fast gates before sweeps.
+- Profiling means trace artifact by default, not benchmark stats. If only result JSON or latency tables exist, label them as benchmark results.
+- Graph/compiled-mode profiling requires same-run provenance across server log, request, trace, benchmark, and cleanup evidence.
 - Shared-machine profiling uses one control session and low-frequency status reads.

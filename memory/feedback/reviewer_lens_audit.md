@@ -67,8 +67,15 @@ option / new public function). For each, answer:
   - Can it be derived from existing knobs? If yes, why expose it?
   - Why is the default what it is? Can the help text be shorter?
   - Is the same value also expressible via another path (CLI vs env vs config)?
+  - If this is a request field, extra field, processor kwarg, multimodal key,
+    protocol schema, or cross-module bridge field, list ingress, value shape,
+    normalization point, owner module, downstream consumer, no-op cases, docs,
+    and tests.
   - If this is an internal optional fast-path parameter, what are its data
     contract and execution-context contract, and where does a wrong caller fail?
+  - If this changes shared state/schema, list every constructor, unpack site,
+    and consumer found by grep, and state how positional arity remains
+    compatible.
 Flag knobs that are accreted/over-defensive.
 
 Return findings in markdown. End with one line: "AUDITS RUN: 1,2,3,4 — N findings (Pa P0, Pb P1, Pc P2)".
@@ -81,6 +88,27 @@ Return findings in markdown. End with one line: "AUDITS RUN: 1,2,3,4 — N findi
 **触发**：自己 push 前 + spawn review sub-agent 时。
 
 **Sub-agent OK ≠ clean PR**。子 agent 只严格在 prompt 框定的范围内审，**没问到的它不会主动说**。每次开 PR / 自审都必须显式跑这 4 条 audit，不论自己跑还是 union sub-agent。
+
+### Findings 先说人话
+
+每条 finding 必须先回答三件事：
+
+1. 会发生什么坏事。
+2. 为什么这是当前 PR 要管的事。
+3. 最小收口是什么。
+
+`contract`、`ABI`、`layering`、`surface area` 这类词可以当标签，但不能替代行为描述。
+
+### Mini spec：不要把 review 当第一道语义检查
+
+非平凡改动写代码前先写短 mini spec。触发条件：
+
+- 新模型 / 新 pipeline / 新 backend / 新 public entrypoint
+- 新增 step / graph / cache / batching / serving / offline / benchmark path
+- 新增 API / CLI / extra field / processor kwarg / multimodal key / bridge field
+- 修改 scheduler、decode、latent、cache、batch 或性能语义
+
+mini spec 至少覆盖 goal、changed surfaces、field contract、validation plan、non-goals。
 
 ### Inline review 处理：锚点代码是 source of truth
 
@@ -147,6 +175,8 @@ grep -rn "<function-name-or-concept>" src/ scripts/ <upstream_repo>/
   - data contract：device、dtype、shape、contiguous、长度、detach/lifetime，由数据 owner 校验
   - execution-context contract：rank、stage、mode、stream、cache enabled 状态，由知道上下文的 caller owner 校验
 - 新增 optional 参数不能靠"现在只有一个 caller"保证安全；wrong caller 必须在 owner 边界早炸，而不是 silent fallback 或晚点产出错 payload
+- request 参数、extra field、processor kwarg、multimodal key、protocol schema、bridge field 必须列 contract matrix：ingress / value shape / normalization / owner / consumer / no-op / docs-tests
+- 共享 state/schema 类型变更必须 grep 所有 constructor、unpack site、consumer；旧 positional constructor 不兼容就是 P1，不是 lint 问题
 
 **反模式**：加 knob 是 cheap，删 knob 是 breaking change。**默认不加**，等 user 真的提需求再加。
 
@@ -184,6 +214,47 @@ Agent C prompt: 跑 Audit 3 + 4（Edge cases + Surface area）。同上。
 ```
 
 收回三份结果**自己 union**，不要再 spawn 一个"汇总 agent"——那会再过一层 framing 漏斗。
+
+### Full diff review 不是 finding closure
+
+当用户要求全量 diff、项目级 review、看有没有垃圾修改，或准备 push / PR body 时，不能只复查已知 finding。先生成：
+
+```powershell
+git diff --stat origin/main...HEAD
+git diff --name-status origin/main...HEAD
+git diff --numstat origin/main...HEAD
+```
+
+然后至少跑三段：
+
+1. Diff census：top files、owner、为什么属于本 PR、是否可拆。
+2. Semantic trace：每个 helper、parser、schema、default、scheduler、docs default 追到 public consumer。
+3. Garbage pass：重复逻辑、silent fallback、未使用 public knob、docs/perf overclaim、helper-only test、同类 bug 横向漏扫。
+
+如果只确认了之前评论的修复，只能写 `known findings closed`，不能写 `full PR reviewed` 或 `clean`。
+
+### Sub-agent finding 先 triage 再编码
+
+sub-agent finding 不是 patch plan。每条 P0/P1 finding 落地前先写：
+
+- root-cause owner 是哪个文件/函数
+- downstream affected 是什么
+- current PR 最小文件集是什么
+- 这是不是当前 PR 必需
+- 测试应该放在哪个 behavior owner
+
+如果 finding 指向 downstream symptom，默认修 source/shared owner，不先给相邻模块加 defensive patch。
+
+### Rebase 后重跑 fresh semantic review
+
+rebase、cherry-pick、conflict resolution 后，旧 review 只对旧 head 成立。必须重审：
+
+- conflict files
+- auto-merged touched files
+- 当前 non-outdated reviewer threads
+- main 分支原语义有没有被“修复”覆盖掉
+
+`ruff`、`compileall`、`git diff --check` 不能代替这一步。
 
 ---
 

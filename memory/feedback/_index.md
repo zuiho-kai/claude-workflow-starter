@@ -6,9 +6,10 @@
 | 文件 | 一句话 |
 |------|--------|
 | [execution_principles.md](execution_principles.md) | 简单方案优先 / 用户给方案直接执行 / 已知结论直接用——执行类合集 |
-| [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark 先锁 scope；公开同步只保留机制层 |
-| [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up 的提交前路由 |
+| [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark/spec 先锁 source of truth；公开同步只保留机制层 |
+| [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up / rebase fresh review 的提交前路由 |
 | [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：侦察、fail-fast cleanup、profiling 状态机、trace quality gate |
+| [model_adaptation_pr_guardrails.md](model_adaptation_pr_guardrails.md) | 新模型 / 新 pipeline / 新 public entrypoint / 性能 claim PR 的 mini spec、checkpoint、entrypoint、evidence gate |
 
 ## 调试方法论 / 接 HF 模型
 | 文件 | 一句话 |
@@ -25,7 +26,7 @@
 | 文件 | 一句话 |
 |------|--------|
 | [code_taste.md](code_taste.md) | **写代码前必读**：命名/归属/复用/测试位置/注释/API 面/diff 气味 |
-| [reviewer_lens_audit.md](reviewer_lens_audit.md) | 自审 + sub-agent review 必跑的 4 条 audit：duplication / layering / edge cases / surface area |
+| [reviewer_lens_audit.md](reviewer_lens_audit.md) | 自审 + sub-agent review 必跑的 audit：duplication / layering / edge cases / surface area / contract matrix / rebase review |
 | [review_delegation_framing.md](review_delegation_framing.md) | spawn review sub-agent 时禁传自己 hypothesis；要么开放式 audit 要么并行多 framing union |
 
 ## 调试收敛 / 结论纪律

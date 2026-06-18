@@ -19,6 +19,12 @@ metadata:
 - stop token / EOS / sampling 策略选择
 - 特殊 token（control token / placeholder / trigger tag）处理
 - generate loop 行为（forced emission / logits processor / stage transition）
+- scheduler / denoising loop / prediction type / step spacing
+- timestep / positional embedding basis and order
+- activation function or gated-MLP detail
+- token / joint / latent / image / action ordering
+- attention mask, pad/eos, and special-token semantics
+- preprocess / resize / mask / coordinate transform / normalization
 - KV cache 切片 / snapshot 触发点 / reuse 长度
 - prompt 模板 / chat_template / system prompt 注入位置
 
@@ -86,6 +92,23 @@ grep -rn "<algorithm-name>|<key-concept>" src/ scripts/
 grep -rn "<algorithm-name>|<key-concept>" <upstream_repo>/
 ```
 **两边都返回非空 → 必须先回答"为什么不 reuse"再动笔**。
+
+---
+
+## Shape-compatible semantic bugs 也是 algorithm bugs
+
+新模型或新 pipeline 接入时，shape clean、strict load、stub smoke 都通过，不代表语义对齐。以下字段经常不会立刻 crash，但会让模型行为偏掉：
+
+| Field | Common false comfort | Upstream check |
+| --- | --- | --- |
+| timestep / positional embedding | 维度对就行 | basis、`cos/sin` 顺序、scale |
+| activation | MLP shape 一样就行 | GELU/tanh GELU/SiLU/gated variant |
+| token or latent order | concat 后长度一样就行 | time/frequency/state/action/image/latent order |
+| scheduler | 能循环去噪就行 | prediction type、solver、step spacing |
+| attention mask | `input_ids != pad_id` 是通用写法 | `pad_id == eos_id`、special token 是否参与 attention |
+| preprocess | dtype/shape 对就行 | resize、crop、mask、coordinate system、normalization range |
+
+如果代码在复刻 upstream module，必须 diff 这些 semantic fields。找不到上游实现时，明确标成 source inference，不要写成已经验证。
 
 ---
 

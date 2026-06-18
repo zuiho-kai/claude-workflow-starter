@@ -7,8 +7,10 @@ This file is the entrypoint for agents working in this repository. Keep it short
 1. Read this file before doing repository work.
 2. Before writing code, tests, examples, API fields, CLI flags, or helpers, read [code_taste](memory/feedback/code_taste.md).
 3. Before remote, GPU, serving, or benchmark work, read [docs/remote_server.template.md](docs/remote_server.template.md) or your gitignored `docs/remote_server.md`, plus [remote_debug_strategy](memory/feedback/remote_debug_strategy.md).
-4. Before committing, pushing, rebasing, or opening a PR, re-read the Git / PR rules below. Commits must use DCO sign-off when the target project requires it.
-5. Before adding new memory or error-book entries, search [memory/MEMORY.md](memory/MEMORY.md). Append to an existing topic unless the new topic is reusable, general, and cannot fit anywhere else.
+4. Before new model, new pipeline, new public entrypoint, or performance-claim PR work, read [model_adaptation_pr_guardrails](memory/feedback/model_adaptation_pr_guardrails.md) and write a short mini spec.
+5. Before committing, pushing, rebasing, or opening a PR, re-read the Git / PR rules below. Commits must use DCO sign-off when the target project requires it.
+6. Before adding new memory or error-book entries, search [memory/MEMORY.md](memory/MEMORY.md). Append to an existing topic unless the new topic is reusable, general, and cannot fit anywhere else.
+7. Repository-specific lessons belong in repository-visible docs such as `memory/`, `.claude_errors/`, or `docs/`, not in a private agent memory store unless the repository explicitly asks for that.
 
 ## 1. Principles
 
@@ -21,6 +23,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - **P7 Scope discipline**: touch only what the task needs. Move unrelated cleanup into a separate change.
 - **P8 Reviewability matters**: names, ownership, reuse, tests, comments, API surface, and diff shape must make sense to a human reviewer.
 - **P9 Contract matrix**: for public fields, request keys, config, CLI, schema, or cross-module bridges, list ingress -> normalization -> owner -> consumer -> docs/tests before editing.
+- **P10 Public boundary**: public docs and PR text should contain mechanism, commands, versions, and reproducible evidence. Private hosts, local paths, cache paths, internal account details, and exploratory artifacts stay out.
 
 ## 2. Hard Gates
 
@@ -40,6 +43,9 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Streaming or protocol changes need bad-path coverage: structured 4xx, engine/runtime failure, appendable deltas, and terminal markers.
 - Shared state, batching, cache, runner, or attention metadata changes need a state matrix, not only tensor-shape tests.
 - Benchmark plans need a scope lock: measured version, measurement patch, code path, metrics, and invalid-metric rules. Smoke results prove path availability, not performance.
+- When a user points to a PR, issue, config, or benchmark spec, anchor that object first: read the actual config, runner/client code, result JSON/artifact, and metric units before answering with numbers.
+- Performance results must be classified as `strict apples-to-apples`, `workload-aligned only`, or `smoke only`. Do not turn a workload-aligned or smoke result into a framework performance claim.
+- Separate L2 and L4 evidence. L2 tests may cover CPU/mock contracts, shapes, metadata, and errors; L4 covers real weights, accuracy, performance, and profiling. Mock weights do not prove real runtime behavior.
 - Reuse existing benchmark, smoke, or offline-inference scripts before writing a new runner.
 
 ### 2.3 Remote, Containers, And Long Runs
@@ -49,6 +55,8 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Services and benchmarks need fail-fast gates: verify nontrivial CLI flags with `--help`, monitor health, PID, and known error signatures, and do a single-request smoke before sweeps.
 - New persistent content in containers belongs on a host-mounted path. Reuse complete existing container content read-only; do not install missing dependencies into container layers or root caches.
 - For offline model loads, set the project’s offline environment variables or pass a local snapshot path explicitly.
+- Profiling requests require trace artifacts, not only benchmark stats. Before delivery, identify the trace files, event coverage, and resource cleanup evidence.
+- For graph or compiled profiling, prove the benchmark, trace, request, and server log are from the same run before making graph-mode conclusions.
 - Release resources explicitly: kill the process group or project process pattern, exit nested shells, then verify scheduler state and GPU memory.
 - On shared machines, keep one control session and low-frequency status reads for long profiling or graph runs.
 
@@ -59,7 +67,10 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Before PR creation and after rebase or cherry-pick, inspect `git log --oneline origin/main..HEAD` and `git diff --stat` for pollution.
 - Read the target repo’s PR template before drafting a PR body. Match its sections instead of using a generic format.
 - Evidence in PR bodies or comments needs provenance: PR head SHA, run checkout SHA, artifact path, timestamp, and metric validity.
+- PR bodies and comments should contain only reviewer-facing evidence. Do not publish local user paths, remote hostnames, cache paths, port numbers, private account names, or internal probe noise.
+- Small PRs should list the smallest real command that was run in `Test Plan`; `Test Result` should be a one-line statement of the core behavior covered.
 - Before pushing nontrivial code or tests, run a reviewer-lens audit: duplication, layering, edge cases, and surface area. Fix findings or document why not.
+- After rebase, cherry-pick, or conflict resolution, run a fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
 - Reviewer follow-up fixes can use a fast path: confirm finding -> minimal edit -> targeted test or blocker note -> lint touched files -> signed commit -> push.
 
 ### 2.5 Architecture And Package Management
@@ -76,6 +87,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Plan and validation: [memory/feedback/plan_and_validation.md](memory/feedback/plan_and_validation.md)
 - PR workflow: [memory/feedback/pr_workflow.md](memory/feedback/pr_workflow.md)
 - Reviewer lens: [memory/feedback/reviewer_lens_audit.md](memory/feedback/reviewer_lens_audit.md)
+- Model adaptation PR guardrails: [memory/feedback/model_adaptation_pr_guardrails.md](memory/feedback/model_adaptation_pr_guardrails.md)
 - Upstream-first algorithm checks: [memory/feedback/upstream_first_for_algorithm.md](memory/feedback/upstream_first_for_algorithm.md)
 - Remote debugging: [memory/feedback/remote_debug_strategy.md](memory/feedback/remote_debug_strategy.md)
 - Container setup: [memory/remote/container_setup.md](memory/remote/container_setup.md)

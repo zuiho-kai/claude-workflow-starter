@@ -68,6 +68,7 @@ helper 层级命名：
 - DiT VAE/VIT pre/post：属于 diffusion pipeline / image processor
 - HTTP 字段透传：属于 serving / protocol，不能在这里 resolve 模型内部概念
 - CLI 示例：只负责把用户输入转成 engine 参数，不拥有算法决策
+- shared serving / protocol path：只保留用户 payload 语义；具体 multimodal key、processor kwarg、pipeline field 归 model parser / pipeline consumer 所有
 
 坏味道：
 
@@ -75,6 +76,7 @@ helper 层级命名：
 - pipeline 复制 processor 里已有的 resize/crop 算法
 - test 为了 import 方便放到无关 test module
 - consumer hardcode producer 的 enum / token range / valid values
+- 为了一个模型改 shared request key，但没有 grep 所有 parser / pipeline consumer
 
 **规则：如果要把数据搬出去才能算，通常是逻辑放错层。把逻辑搬到数据 owner，而不是复制数据。**
 
@@ -113,6 +115,8 @@ helper 层级命名：
 - regression test 只测了 helper 本身，没测真实 caller path
 
 **规则：reviewer 问“why need this test here?”，就是测试位置失败。先移动，不要解释。**
+
+新增测试前必须能绑定当前 diff 的行为来源：reviewer comment、当前 PR 修改的 contract、当前修复的明确 bug、或防止本次修复回退的最小 regression。只是“看起来有价值”的测试会膨胀 review surface；如果测试只保护 over-scope defensive patch，patch 删除时测试也应删除。
 
 ## 5. 注释：只解释策略和不变量，不解释语法
 
@@ -160,6 +164,22 @@ helper 层级命名：
 
 **规则：加参数很便宜，维护参数很贵。没有明确用户语义的 knob 不加；已有方法新增参数时，contract 不写进 docstring 就不算完成。**
 
+新增 request 参数、nested extra field、processor kwarg、multimodal key、protocol schema、或跨模块 bridge field 前，先写 contract matrix：
+
+| Column | Question |
+| --- | --- |
+| ingress | top-level field / nested field / CLI or example / legacy caller |
+| value shape | bool / string bool / `None` / 0 or 1 / sentinel / omitted |
+| normalization | 唯一 parse 点在哪里；下游是否禁止再 `bool(value)` |
+| owner | protocol / serving / bridge / pipeline / processor / model config |
+| consumer | 下游实际读哪个 key 或 field；旧 key 是否兼容 |
+| no-op | empty input / feature disabled / unsupported path 应如何处理 |
+| docs/tests | protocol docs、bad-path test、legacy-key test、non-default test |
+
+新增第二条执行路径时，例如 step、graph、cache、batch、serving、offline 或 benchmark path，不要复制 normal path 的 request parsing。把字段解析放到数据 owner helper，让两条路径共用；只在明确不支持的能力或 execution-context 约束处早炸或显式 no-op。
+
+改共享 state/schema 类型也算 API 面。`NamedTuple`、dataclass、`TypedDict`、msgspec Struct、request/response schema 加字段前，先 grep 所有 constructor、unpack site 和 consumer。新字段优先末尾默认值或 keyword 构造；不要让旧 positional caller 到 runtime 才炸。
+
 ## 7. Diff 气味：提交前看人工 reviewer 第一眼
 
 提交 / push 前必须看 diff，不只是跑测试：
@@ -181,6 +201,9 @@ git diff origin/main... -- <changed-files>
 - 新增参数的执行上下文 guard 是否在正确 owner：rank/stage/mode 不对时是否立刻报错
 - generic helper 的命名是否被某个 caller 语义污染
 - 是否出现“兼容一下”“兜底一下”的 silent fallback
+- shared state/schema 变更是否 grep 过所有 constructor / unpack / consumer
+- tensor-like field 是否用了 Python `or` 或 truthiness fallback
+- 新执行路径是否复制了 request parsing
 
 **规则：如果 diff 需要你在 review comment 里解释“其实这是因为…”，优先把代码/命名/注释改到不需要解释。**
 
@@ -197,6 +220,8 @@ git diff origin/main... -- <changed-files>
 - upstream / official 行为对应哪段？
 - 以后加第二个模型 / 第二个 backend 会不会复制第三份？
 - 新增 optional 参数被未来 caller 误传时，会在哪里失败？是早炸还是静默 fallback？
+- 这个字段从 ingress 到每个 consumer 是不是一条链路？有没有把同一个 normalized value 传给语义不同的 consumer？
+- 这是 shared state/schema ABI change 吗？旧 positional constructor 还兼容吗？
 
 答不出来，先别写或先改设计。
 
