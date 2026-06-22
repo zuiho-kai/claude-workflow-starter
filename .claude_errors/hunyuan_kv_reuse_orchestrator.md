@@ -103,7 +103,7 @@ S = 11621, N = 11620, S - N = 1  ✓
 - 无 AttributeError ✓
 - 图像跟其他 SHM-reuse 跑的同 mode PSNR 在 22-24 dB 范围（合理 same-mode floor）✓
 
-## 我踩的坑（meta，跟 [[conclusion_discipline]] 对应）
+## 我踩的坑（meta，跟 [conclusion_discipline](../memory/feedback/conclusion_discipline.md) 对应）
 
 ### 错 1：把 "S-N=1" 当 design intent
 
@@ -189,6 +189,6 @@ S = 11621, N = 11620, S - N = 1  ✓
 
 ## 链接
 
-- 行为纪律抽象：[[conclusion_discipline]]
-- 派生宪法：[[P1 证据先行]] / [[P3 完整链路]] / [[P7 范围自律]]
-- review iteration 抽象规则：[[upstream_first_for_algorithm]] / [[algorithm_vs_framework_fix]] / [[narrow_optimization_scope]]
+- 行为纪律抽象：[conclusion_discipline](../memory/feedback/conclusion_discipline.md)
+- 派生宪法：`P1 证据先行` / `P3 完整链路` / `P7 范围自律`
+- review iteration 抽象规则：[upstream_first_for_algorithm](../memory/feedback/upstream_first_for_algorithm.md) / [algorithm_vs_framework_fix](../memory/feedback/algorithm_vs_framework_fix.md) / [narrow_optimization_scope](../memory/feedback/narrow_optimization_scope.md)

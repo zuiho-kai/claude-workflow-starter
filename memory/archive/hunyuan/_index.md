@@ -10,6 +10,8 @@
 | [bidirectional_attention.md](bidirectional_attention.md) | 图像 token 双向注意力：把 `hunyuan_image_3_moe` 加进 vllm 上游 `MM_PREFIX_LM_MODELS` |
 | [stage_device_mapping_race.md](stage_device_mapping_race.md) | DP 多引擎并发 `CUDA_VISIBLE_DEVICES` 竞态根因（PR #3207 + ca5e329b） |
 | [profiling_tp4_fp8_baseline.md](profiling_tp4_fp8_baseline.md) | tp4_fp8 基线：2.85s 延迟 / 1.15s `model.forward` |
+| [ar_only_tp2_benchmark_runbook.md](ar_only_tp2_benchmark_runbook.md) | HunyuanImage3 AR-only / TP2 / PR #3767 metrics overlay 的远端 benchmark 复用参数、artifact 和已知结果 |
+| [ar_graph_online_profiling_20260608.md](ar_graph_online_profiling_20260608.md) | HunyuanImage3 AR graph serve / online profiler 2026-06-08 的远端参数、artifact、错误签名和正式 trace 验收 |
 | [hunyuanimage3_ci_progress.md](hunyuanimage3_ci_progress.md) | HunyuanImage3 GEBench CI 接入进度记录（2026-04-21 中间快照） |
 | [painterly_drift_investigation.md](painterly_drift_investigation.md) | IT2I 在 vllm 0.20 + tfm 5.x 栈下输出油画风的调研记录：所有已排除嫌疑（MoE/FA3/SDPA/VAE/SigLIP2/expert weights）+ 探针 patch + 复用诊断套路 + 还活着的嫌疑（AR CoT 文本 / patch_embed conv / vae spatial tiling / NCCL）|
 | [multi_image_input_plumbing.md](multi_image_input_plumbing.md) | IT2I 多图输入各层支持现状盘点：DiT/AR processor/schema 全已就位，只缺 prompt_utils 的 N 个 `<img>` 占位符；附 pre-existing size fallback bug 单独 PR 提示 |

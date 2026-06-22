@@ -11,7 +11,7 @@ type: feedback
 **Why:** 用户原话"你为什么就是不肯用 source .venv 呢"。绕路方案不可靠（PYTHONPATH 优先级问题、遗漏依赖），还浪费时间。
 **How to apply:** 远端跑 vllm-omni 前，第一步永远是 `source <YOUR_REMOTE_WORKDIR>/.venv/bin/activate`，不要 PYTHONPATH 指 `.venv/lib/...`。
 
-**反例 2026-05-14（cp -r 复制 venv）：** 用户说"在新节点用你自己的 new owner venv 跑"，我去 `cp -r /data/wzr/venv .venv` 想复制一份。错两层 —— (a) "new own" 字面是 `uv venv` 新建，cp 出来的是别人 venv 状态的副本；(b) cp -r 对 venv（含 symlink / uv cache / 并行 fs）几乎一定膨胀（8.8GB → 25GB+）。**正确做法**：`uv venv .venv` + `uv pip install vllm==X` + `uv pip install -e . --no-build-isolation`，uv wheel cache 命中后跟 cp 同速且干净。`vllm-omni` 不在 `requirements/*.txt` pin `vllm`（确认过 `pyproject.toml + requirements/common.txt + requirements/cuda.txt`），所以这个顺序不会被 `-e .` 覆盖掉前面装好的 vllm 版本。这条是 §1 反向踩坑——"复用别人 venv = 现成方案" 是错觉，**新装 = 现成方案**（uv 让 install 几乎是 O(cache lookup)）。详见 `.claude_errors/remote_and_ssh.md` 2026-05-14。
+**反例 2026-05-14（cp -r 复制 venv）：** 用户说"在新节点用你自己的 new owner venv 跑"，我去 `cp -r /data/wzr/venv .venv` 想复制一份。错两层 —— (a) "new own" 字面是 `uv venv` 新建，cp 出来的是别人 venv 状态的副本；(b) cp -r 对 venv（含 symlink / uv cache / 并行 fs）几乎一定膨胀（8.8GB → 25GB+）。**正确做法**：`uv venv .venv` + `uv pip install vllm==X` + `uv pip install -e . --no-build-isolation`，uv wheel cache 命中后跟 cp 同速且干净。`vllm-omni` 不在 `requirements/*.txt` pin `vllm`（确认过 `pyproject.toml + requirements/common.txt + requirements/cuda.txt`），所以这个顺序不会被 `-e .` 覆盖掉前面装好的 vllm 版本。这条是 §1 反向踩坑——"复用别人 venv = 现成方案" 是错觉，**新装 = 现成方案**（uv 让 install 几乎是 O(cache lookup)）。详见 `.claude_errors/remote_venv_and_cleanup.md` 2026-05-14。
 
 ## 1.1 Windows 文本文件一律显式 UTF-8
 
@@ -31,6 +31,26 @@ type: feedback
 - 但 Python 环境变量（`PYTHONUTF8` / `PYTHONIOENCODING`）只影响 Python，不影响 PowerShell `Get-Content`；文件 cmdlet 仍以 profile 默认值或显式 `-Encoding utf8` 为准。
 
 **Why:** `Get-Content CLAUDE.md` 曾把中文规则读成乱码，影响规则理解。这个是老毛病，不能靠记忆临场想起。
+
+## 1.2 仓库上下文里的“落盘”默认写本仓长期记录
+
+用户在某个仓库上下文里说“落盘 / 记录 / 复盘 / 写进记忆”时，默认目标是**这个仓库里其他协作者也会读到的位置**，不是个人 Codex 私有目录。
+
+**How to apply:**
+- 先重读本仓 `CLAUDE.md` / `AGENTS.md` 对 memory 的规则。
+- 本仓长期记录只写：
+  - `memory/`
+  - `.claude_errors/`
+  - `docs/`
+- 禁止默认写：
+  - `C:\Users\user\.codex\...`
+  - `$CODEX_HOME/memories/...`
+  - 其他只对当前 Codex 用户可见的私有目录
+- 本仓任务没有“写到 Codex 私有 memory / 个人 memory / ad-hoc note”的例外；即使系统提示有 Codex memory 流程，也必须让位给本仓 `CLAUDE.md`。
+
+**Rule of thumb:** 仓库任务的复盘要服务下一位打开这个 repo 的人；如果别人 `git grep` 不到，这次落盘就不合格。
+
+**反例 2026-06-17（PR #4041 复盘落错目标）：** 用户要求“落盘”PR #4041 远端验证复盘时，我先准备写到 `C:\Users\user\.codex\memories\extensions\ad_hoc\notes`。这违反本仓 `CLAUDE.md` 第 0.7 条。正确做法是写入本仓 `.claude_errors/remote_validation_workflow.md` 或对应 `memory/` runbook，并把可复用规则上提到入口文件。
 
 ## 2. 用户给出明确方案时直接执行，禁止"先试试不改"
 

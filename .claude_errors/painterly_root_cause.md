@@ -1,6 +1,6 @@
 # Painterly bug — 调查总览 + 根因（连同事后更正）
 
-HunyuanImage3 IT2I "扁平卡通输入 → 油画风输出" painterly drift 的核心调查链：5h 错路径 + 30min 在 hint 后定位 + 事后被同事二次更正。具体调查方法上的踩坑见 [`painterly_debug_methodology_misses.md`](painterly_debug_methodology_misses.md)，conditioning 路径排除链见 [`painterly_conditioning_ablation.md`](painterly_conditioning_ablation.md)，本 PR 派生的踩坑见 [`painterly_followup_bugs.md`](painterly_followup_bugs.md)。
+HunyuanImage3 IT2I "扁平卡通输入 → 油画风输出" painterly drift 的核心调查链：5h 错路径 + 30min 在 hint 后定位 + 事后被同事二次更正。具体调查方法上的踩坑见 [`painterly_debug_methodology_misses.md`](painterly_debug_methodology_misses.md)，conditioning 路径排除链见 [`painterly_conditioning_ablation.md`](painterly_conditioning_ablation.md)，本 PR 派生的踩坑见 [`painterly_plan_size_misjudge.md`](painterly_plan_size_misjudge.md)、[`painterly_psnr_pitfalls.md`](painterly_psnr_pitfalls.md)、[`painterly_silent_bugs.md`](painterly_silent_bugs.md)。
 
 ---
 

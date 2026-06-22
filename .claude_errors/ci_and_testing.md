@@ -1,5 +1,91 @@
 # Error Book: CI & 测试
 
+## 2026-05-29 — PR #3734 prefix-cache 修完 runner 后，又漏掉 online serving chat_template 入口
+
+**症状**：PR #3734 在修完 `query_start_loc_cpu` 后，Buildkite 仍失败在 `tests/e2e/online_serving/test_qwen3_omni.py::test_thinker_prefix_caching[omni_server0]`。这次不是 runner crash，而是 OpenAI client 收到 400：`As of transformers v4.44, default chat template is no longer allowed, so you must provide a chat template if the tokenizer does not define one.` 最终修复后新 head `957a469ce56928a3904457a5092654fa35d9aed7` 的 GitHub Actions、Linux Buildkite #10620、AMD #8143、Intel #4632 全部通过。
+
+**根因**：我把这条 e2e 只建模成“prefix cache tail-only hidden-state payload”验证，忽略了它是完整 online serving 请求。`test_thinker_prefix_caching` 会启动 Qwen3-Omni server，再走 OpenAI chat completions 的 preprocessing；在 transformers 4.44+ 下 tokenizer 没有内置 `chat_template` 时，默认模板已经不允许。Qwen3-Omni 的官方模板在模型 repo 的独立 `chat_template.json`，不是 `tokenizer_config.json` 内置字段。之前两个 request 已通过的路径没有证明 prefix-cache 参数这条 server/request 组合也能通过 preprocessing；本地缺完整 e2e 环境后，我也没有把“请求进模型前的 tokenizer/template artifacts”列进验证矩阵。
+
+**解法**：修 server 初始化，不在测试里硬塞模板：CLI 没传 `--chat-template`，且 engine tokenizer 自身没有 `chat_template` 时，从本地模型目录或 HF 本地 cache 的 `chat_template.json` 读取官方模板，并传给 OpenAI serving render/chat handler。修完跑 changed-file `ruff check`、`ruff format --check --diff`、`py_compile`、`git diff --check`，再用最小 local-path smoke 验证 `chat_template.json` loader 能读 dict payload；amend + DCO sign-off，用 Taffy SSH identity `force-with-lease` 推回 PR 分支，等待所有 CI 绿后再收口。
+
+**对未来的提醒**：
+1. online serving e2e 失败时，先按 `request -> API protocol -> chat template/tokenizer/processor -> engine prompt -> runner` 全链路分层，不要因为 PR 改的是 runner 就只看 runner。
+2. transformers / vLLM 升级引入的行为门（例如 transformers 4.44 禁默认 chat template）属于当前 PR 的 CI surface；如果你的新测试激活了这条路径，就要修或显式验证它。
+3. 模型 repo artifact 不只 `config.json` / weights。chat/template/tokenizer/processor 可能在 `chat_template.json`、`preprocessor_config.json`、subfolder config 等独立文件里；真实 checkpoint 缺这些文件时，stub smoke 和 runner 单测都不能证明 serving 能用。
+4. 不要用“已有同文件其它测试通过”推断新增 server args 组合通过。prefix cache / stage overrides / prompt token details 这类 server 参数会改变实际 e2e 路径，必须单独把 preprocessing 和 first request 纳入验证。
+5. CI 修复连续两次失败后，下一轮必须反转假设：问题可能已经不在刚修的模块，而在新 head 走到的更上游/更下游路径。先读完整错误文本，再按层级收敛。
+
+## 2026-05-29 — PR #3734 新路径激活主线 dormant typo，第一次修复误判真实 runner abstraction
+
+**症状**：PR #3734 被要求 fix CI 后，Buildkite `vllm-omni` 和 `vllm-omni-amd-ci` 都失败在 `tests/worker/test_gpu_ar_model_runner.py::test_sample_tokens_tail_only_prefix_cache_uses_staged_cpu_hidden_states`。错误是 `TypeError: 'builtin_function_or_method' object is not subscriptable`，位置在 `gpu_ar_model_runner.py` 的 `query_start_loc_cpu[idx]`。第一版修复把它改成 `self.query_start_loc.cpu()` 后，下一轮 Linux / AMD / Intel 多个真实 runtime step 全部变成 `TypeError: 'Tensor' object is not callable`，位置是同一行。
+
+**根因**：`query_start_loc_cpu = self.query_start_loc.cpu` 这行主线旧代码在单测假对象里拿到的是 bound method，不是 CPU tensor；过去常见路径只赋值不索引，所以 dormant。PR #3734 的 tail-only prefix-cache hidden-state payload 测试第一次让这条路径消费 `query_start_loc_cpu`，于是旧 typo 变成当前 PR 的 CI failure。但真实 runner 里的 `query_start_loc` 不是裸 `torch.Tensor`，而是带 `.cpu` tensor 属性的 buffer wrapper；我把单测对象的 `torch.Tensor.cpu()` 语义直接套到真实 runner 上，造成第二轮 CI 在真实路径里反向报 `'Tensor' object is not callable`。真正流程问题不是“谁写了 typo”，而是本地 pytest 因 `ModuleNotFoundError: No module named 'vllm'` 无法启动后，我只保留了 `ruff` / `ruff format --check` / `py_compile`，且最小 smoke 只覆盖裸 Tensor 形态，没有覆盖真实 runner 的 `.cpu` 属性形态。
+
+**解法**：改成兼容真实 runner 和裸 Tensor 的 duck-typed 获取方式：先读 `query_start_loc_cpu = self.query_start_loc.cpu`，如果它是 callable 才调用一次。把新增单测参数化，覆盖 `runner.query_start_loc = torch.tensor(...)` 的方法形态，以及 `runner.query_start_loc = SimpleNamespace(cpu=torch.tensor(...))` 的真实 runner 属性形态。重新跑 changed-file `ruff check`、`ruff format --check --diff`、`py_compile`，再用最小同逻辑 smoke 验证两种形态都可索引，随后 amend + DCO sign-off，用 Taffy SSH identity `force-with-lease` 推回 PR 分支。
+
+**对未来的提醒**：
+1. PR 新增/扩大执行路径后，被激活的主线旧代码也属于本 PR 行为面；`git blame` 只能解释来源，不能作为跳过修复/验证的理由。
+2. 新增/修改测试本地跑不起来时，不能用 `ruff` / `py_compile` 代替行为验证；必须切到 CI-like 容器/远端，或写一个绕开全 pytest fixture 但执行同一核心分支的最小 smoke。
+3. 最小 smoke 不能只证明自己造的 fake 能跑；必须对照真实 runner abstraction，尤其是 property vs method、CPU/GPU buffer wrapper、`.np` / `.cpu` / `copy_to_gpu()` 这类非裸 Tensor 接口。不确定时把测试参数化覆盖两种形态。
+4. runner / prefix-cache / pooler payload / shared execution state 改动的状态矩阵要包含“旧变量第一次被消费”的路径，尤其是赋值后才索引/切片/调用的中间变量。
+5. 修 CI 时先从失败日志收敛到一个确定根因，再改最小 patch；不要因为 typo 是旧代码就扩大 scope 顺手清理同类文件。
+
+## 2026-05-26 — PR #3766 DiT batching 漏测非齐次 attention metadata
+
+**症状**：Semmer2 用 `diffusion_benchmark_serving.py --dataset vbench --task t2i --max-concurrency 4 --num-inference-steps 50` 测 HunyuanImage3 DiT batching 时，服务端在 FlashAttention piecewise path 报 `ValueError: piecewise_attn requires homogeneous batch: sample 0 spans [(12, 4108)] != sample 2 spans [(9, 4105)]`。默认 `hunyuan_image3_dit.yaml` 和之前 benchmark 没暴露这个问题。
+
+**根因**：我把 grouped batching 的风险主要建模成 tensor shape/padding/cat 问题，漏审了非 tensor attention metadata。`full_attn_spans` 随 prompt length 变化；不同 prompt 合批后，即使 q/k/v shape 能 pad 到一致，FlashAttention piecewise backend 仍要求每个 sample 的 full-attn span homogeneous。official benchmark 默认重复同一 prompt，span 天然一致；默认配置若 `max_num_seqs: 1` 又会让“服务能跑”变成假信心。
+
+**解法**：在 `Attention._run_local_attention` 对 `FLASH_ATTN` + 非齐次 `full_attn_spans` 做显式检测，有 `attn_mask` 时 fallback 到 SDPA，并用 `warning_once` 标记。新增单测分别覆盖非齐次 fallback 和齐次仍走 FlashAttention。远端 B1 复现验证：新增单测 2 passed，vbench smoke `num_prompts=8/max_concurrency=4/steps=8` 不再触发 `piecewise_attn requires homogeneous batch`。参考 PR #3857：HunyuanImage3 DiT precision validation deploy 选择 `TORCH_SDPA`，说明 backend 本身就是正确性口径的一部分。
+
+**对未来的提醒**：
+1. batching / `step_execution` / `InputBatch` merge-split 改动，测试不能只证明 tensor shape 能合；必须列完整 state ABI，包括 tensor 字段和非 tensor metadata。
+2. 至少补一组异质输入：不同 prompt length、不同 request-local metadata、`max_concurrency/max_num_seqs > 1`，并证明实际命中 grouped path。
+3. duplicate prompt benchmark 只能证明 smoke，不能证明 variable prompt dynamic batching。
+4. backend 有 homogeneous span、mask layout、dtype、precision 约束时，必须写清 fallback/early error，并用坏路径单测锁住。
+
+## 2026-05-21 — PR #3766 pre-commit 因 ruff format 漏跑失败
+**症状**：PR #3766 新提交后 GitHub `pre-commit / pre-commit (pull_request)` 21s 失败；日志里 `ruff format` 报 `1 file would be reformatted`，文件是 `vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py`。具体差异只是一个 `raise ValueError(...)` 被 ruff 从多行压成 line-length 允许的单行。
+
+**根因**：最后一次代码 patch 后，我只跑了 `ruff check`、pytest/py_compile 和 e2e 相关验证，没有跑 `ruff format --check` 或完整 pre-commit。之前已有“提交前跑 ruff check”的硬规则，但 CLAUDE.md C7 写成“需要时再跑 format --check”，给自己留了误判空间；而 pre-commit 实际同时卡 lint 和 format。
+
+**解法**：本地执行 `python -m ruff format vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py` 修复格式，再跑 `ruff check`、`ruff format --check`、`py_compile`，随后 `git commit --amend -s --no-edit` 并按 Taffy SSH identity `force-with-lease` 推回 PR 分支。新一轮 GitHub `pre-commit` 已通过。
+
+**对未来的提醒**：只要改过 Python 文件，push 前固定跑两条：`ruff check <changed files>` 和 `ruff format --check --diff <changed py files>`，并且必须在最后一次 edit/amend 前的最终文件状态上跑。pytest、py_compile、远端 e2e 只能证明行为，不证明格式；CI 报 pre-commit/ruff 失败一律按本地验证漏项处理，修完 amend+push 后重新看新 checks。
+
+## 2026-05-21 — PR #3723 reviewer feedback 复盘：streaming public API 不能只按 endpoint 增量做
+
+**症状**：HunyuanImage3 IT2I `/v1/images/edits stream=true` 第一版能跑通 happy path，但人工 review 连续指出四类问题：
+1. 新 public API 字段 `stream` 和 SSE response format 没补文档。
+2. streaming 逻辑放在 `api_server.py`，没有跟 `create_chat_completion` 一样由 serving 层在 `stream=True` 时返回 generator、非流式返回完整结果。
+3. 手写 `previous_text_by_index` 计算 AR delta，没有复用 engine 侧已有 `RequestOutputKind.DELTA`。
+4. `ar_delta` chunk 没有 `index`，当前 Hunyuan 常规单路 AR 可用，但未来多 completion 会把多个 AR 流混在一起。
+
+**为什么出现**：
+- 把需求理解成“给 `/v1/images/edits` 加一个 stream 分支”，而不是“新增公开 API + 新 streaming protocol surface”。因此只盯代码和 tests，漏掉 docs、schema、错误语义和客户端消费语义。
+- 没先 grep/diff 仓库已有 streaming endpoint，尤其没有对齐 `create_chat_completion` 的分层：API 层接参和包装 response，serving 层持有生成逻辑。
+- 为了快速产出手写 delta 逻辑，没有先查 engine output processor 里已有的 DELTA 输出机制，导致重复实现且协议语义更脆。
+- 设计 chunk schema 时按当前模型 n=1 的实际路径拍板，没有从 public response 的扩展边界出发。
+- sub-agent review 和 ruff 已经变成硬卡点，但第一版 reviewer-lens prompt 没把 docs surface / existing streaming pattern / protocol append invariant 显式列入审计重点。
+
+**怎么解决**：
+1. API 层只保留 `stream` form 参数、单阶段早拒绝和 `StreamingResponse(media_type="text/event-stream")` 包装。
+2. `generate_diffusion_images(..., stream=True)` 下沉到 serving 层返回 async generator，`stream=False` 保持原完整返回路径。
+3. stage0 AR sampling params 使用 `RequestOutputKind.DELTA`，删除手写 previous-text delta 计算。
+4. 在 `protocol/images.py` 定义正式 stream response chunk schema：`ImageEditARDeltaChunk`、`ImageEditImageChunk`、`ImageEditStreamError`，并导出。
+5. `ar_delta` chunk 加 `index`，让客户端能区分多路 completion；当前 Hunyuan 单路仍保持简单消费。
+6. 补 `docs/serving/image_edit_api.md`：`stream` 参数、适用条件、多阶段 AR+DiT 顺序、`ar_delta` / final image / error / `[DONE]` 示例、curl 示例。
+7. 补坏路径和协议测试：单阶段早拒绝、DELTA sampling params、多个 index、空 final image/error、最终 image chunk base64/format/size。
+8. 本地跑 changed-file `ruff check`、`py_compile`、`git diff --check`；远端新 `/home/wzr` worktree + fresh venv 跑 focused API tests 和 Hunyuan bridge regression。
+
+**之后怎么避免**：
+1. 看到新增 `stream` / SSE / WebSocket / OpenAI-compatible response，先做 protocol audit，不把它当 endpoint if 分支：docs、schema、错误 chunk、DONE、client append 语义都要覆盖。
+2. 动手前先 grep 现有 streaming endpoint 和 output processor；已有 `RequestOutputKind.DELTA` / error handling / EngineDeadError 语义优先复用。
+3. streaming response 类型先落在 protocol 层，再接 serving，再接 API；不要从 endpoint 里临时 yield dict。
+4. 字段名叫 `delta` 的测试必须模拟客户端 append 重建最终文本；如果 append 不成立，改协议字段，不改测试迁就。
+5. reviewer-lens 的 Surface area audit 必须显式问 docs surface：新增参数是否有文档、默认值、适用条件、响应格式、错误格式。
+6. 提交/推 PR 前固定顺序：diff 自审 → sub-agent reviewer-lens audit → 修 findings → ruff/必要 pytest → PR body/docs 读回检查。
+
 ## 2026-05-19 — PR #3723 streaming image edit review 漏掉协议坏路径
 **症状**：审 `vllm-project/vllm-omni#3723`（`/v1/images/edits stream=true`）时，happy path 测试和 lint 基本过，但 code review 抓到三类协议/坏路径问题：(1) 新 SSE generator 用 generic `except Exception` 吃掉 `EngineDeadError`，不像已有 chat streaming 那样 `terminate_if_errored`；(2) `ErrorResponse` 在 streaming preparation 中被转成 `ValueError(prepared.message)`，400 类用户错误在 SSE error chunk 里丢状态码并默认变 500；(3) `ar_delta` replacement 分支 emit 的不是 appendable delta，客户端拼接会得到 `draftfinal answer`，测试却把这个行为固化。
 **根因**：把“能把 stage-0 AR 文本和最终图按 SSE 流出来”当成“streaming endpoint 做完了”，没有把新 endpoint 当成 public protocol surface 审。review/test 主要覆盖了文本、图、DONE、单阶段拒绝，没沿着已有 streaming 实现逐项对齐 `normal chunk / structured validation error / EngineDeadError / generic exception / DONE / client append semantics`。
@@ -134,3 +220,19 @@ pytest -s -v tests/e2e/accuracy/test_gebench_h100_smoke.py \
   - 看 GEBench 综合分（overall_mean）之前先 grep 单样本 raw_scores 看分布，**全 5 + 全低分混合 mean 出 0.72 是可疑信号**，不是"中等水平"
   - judge LLM reasoning 字段必读，包含 "no specific content requirements" / "abstract composition" / "blank" 等措辞 → 判官在打 cargo cult 满分
   - 单边 judge 分不能当 quality 证据（与 B9 共鸣）；用户说"出图打分有问题"时第一动作是看图本身，**不是看综合分**
+
+## 2026-05-26 — PR #3474 GO-1-Air：shape-clean smoke 掩盖新模型语义错配
+
+**症状**：PR 做了 GO-1-Air 相关重构后，`load_state_dict` 能做到 `0 missing / 0 unexpected`，stub smoke 能跑，输出 shape 和 NaN/Inf 检查都过。但按 module owner + omni project owner 视角复审时，发现多处 shape-compatible semantic bugs：timestep embedding `sin,cos` vs upstream `cos,sin`，MLP activation `SiLU` vs tanh GELU，joint token order 不一致，手写 scheduler 没对齐 DPM-Solver，`pad_id == eos_id` 时 attention mask 错杀 EOS，real checkpoint tokenizer 缺失被 stub 路径掩盖。
+
+**根因**：
+1. 把 weight-load clean / shape smoke 当成 correctness 证据，忘了它们只能证明 plumbing。
+2. 没把 upstream semantic parity 当成新模型接入的 hard gate；scheduler、embedding order、activation、token order 这些都是 algorithm surface。
+3. review sub-agent framing 太泛，没指定 module owner 与 project owner 两个角色，导致初审容易停在“看起来结构 OK”。
+4. PR body 没强制区分 source inference、stub smoke、real checkpoint validation，证据等级混在一起。
+
+**规则化**：
+- 新模型 PR 必填 semantic parity matrix：scheduler / denoising loop、embedding `cos/sin` 顺序、activation、token order、special token + pad/eos attention mask、preprocess、noise/action contract。
+- tokenizer / processor / strict load / config 缺失必须 fail fast；禁止 silent fallback 到 zero-action / stub。
+- stub smoke、real checkpoint、official e2e 三类证据在 PR body 分开写，并标 allowed conclusion。
+- 第一次 push / PR 创建前必须用双 owner framing 跑 reviewer-lens audit：module owner 查 upstream parity，omni project owner 查文件归属、API 面、测试与 PR evidence；reviewer 提醒后再补跑只能算补救，不算合格首轮自审。

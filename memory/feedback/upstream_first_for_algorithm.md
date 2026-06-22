@@ -9,7 +9,7 @@ metadata:
 
 PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_3.py` 就在 `D:\vllm-omni\hunyuan3.0_ins\` 下，**距离一次 grep 的距离**，我没读，靠 trace 现场反推方案，结果跟 upstream 设计哲学背道而驰。reviewer 一句 "ref upstream line 3290" 把方案打回原形。
 
-派生自 [[P1 证据先行]]。是 [B7] 的精神扩展——B7 字面只管"测 baseline 前 grep README"，这条把它扩到所有 algorithm 决策。
+派生自 `P1 证据先行`。是 [B7] 的精神扩展——B7 字面只管"测 baseline 前 grep README"，这条把它扩到所有 algorithm 决策。
 
 ---
 
@@ -19,6 +19,10 @@ PR #3444 review iteration 复盘抽出。`hunyuan3.0_ins/modeling_hunyuan_image_
 - AR stop token / EOS / sampling 策略选择
 - 特殊 token（control token / placeholder / trigger tag）处理
 - generate loop 行为（forced emission / logits processor / stage transition）
+- scheduler / denoising loop / noise prediction type
+- embedding basis 顺序（`cos/sin`）、activation function、token / joint order
+- attention mask / pad-eos / special-token 语义
+- preprocess / resize / mask / coordinate transform 语义
 - KV cache 切片 / snapshot 触发点 / reuse 长度
 - prompt 模板 / chat_template / system prompt 注入位置
 
@@ -104,9 +108,27 @@ grep -rn "<algorithm-name>\|<key-concept>" hunyuan3.0_ins/  # or other reference
 
 ---
 
+## Shape-compatible semantic bugs 也是 algorithm bugs（PR #3474 GO-1-Air）
+
+PR #3474 的教训是：新模型接入时，shape / state dict / stub smoke 都通过，不代表 algorithm 对。以下字段只要与 upstream 不一致，就会让模型语义偏掉，但通常不会立刻 crash：
+
+| 字段 | 常见误判 | 必查 upstream |
+| --- | --- | --- |
+| timestep / positional embedding | 维度对就行 | `cos/sin` 拼接顺序、frequency basis、scale |
+| activation | MLP shape 一样就行 | `GELU` / tanh GELU / `SiLU` / gated MLP |
+| token / joint order | concat 后长度一样就行 | time / frequency / state / action / image token 的相对顺序 |
+| scheduler | alpha-bar loop 能去噪就行 | DPM-Solver / Euler / DDIM、prediction type、step spacing |
+| attention mask | `input_ids != pad_id` 是通用写法 | `pad_id == eos_id`、special token 是否参与 attention |
+| preprocess / action normalization | dtype/shape 对就行 | resize、crop、mask、coordinate system、normalization range |
+
+**规则**：如果代码在复刻 upstream module，即使权重能 strict load，也必须 diff 这些 semantic fields。找不到上游实现时才可以写“推理：从 config / paper / naming 推断”，并在 PR body 标成 source inference，不得写成已验证。
+
+---
+
 ## 链接
 
-- PR #3444 review iteration：[[hunyuan_kv_reuse_orchestrator]]（review iteration 段）
-- PR #3626 review iteration：[[reviewer_lens_audit]]（4 条评论同一根因）
-- 相邻：[[hf_alignment_pitfalls]]（HF model 接入时 grep README/demo）
+- PR #3444 review iteration：[hunyuan_kv_reuse_orchestrator](../../.claude_errors/hunyuan_kv_reuse_orchestrator.md)（review iteration 段）
+- PR #3626 review iteration：[reviewer_lens_audit](reviewer_lens_audit.md)（4 条评论同一根因）
+- PR #3474 review iteration：GO-1-Air shape-compatible semantic mismatch
+- 相邻：[hf_alignment_pitfalls](../hf/hf_alignment_pitfalls.md)（HF model 接入时 grep README/demo）
 - 派生硬规则：CLAUDE.md B30

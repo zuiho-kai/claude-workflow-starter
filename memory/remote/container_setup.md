@@ -1,6 +1,6 @@
 ---
 name: 容器内 cache / 持久化 / cwd / docker exec 陷阱
-description: 容器持久化三件事——HF cache 必须 unset TRANSFORMERS_CACHE/HF_HUB_CACHE、所有产出写挂载 Lustre 路径、docker exec chdir 报错先 cd 到匹配宿主路径
+description: 容器持久化三件事——HF cache 必须 unset TRANSFORMERS_CACHE/HF_HUB_CACHE、uv/vLLM/venv/cache 可只读复用已有 /root 但禁新写、所有产出写挂载 Lustre 路径、docker exec chdir 报错先 cd 到匹配宿主路径
 type: rule
 ---
 
@@ -8,7 +8,9 @@ type: rule
 
 ## 1. 容器是临时的，只有挂载的宿主路径才持久
 
-**容器是临时的。只有挂载的宿主路径才持久。** 凡是有价值的东西（模型、数据集、venv、代码、产出），**第一次下载 / 生成时就写到挂载的 Lustre 路径**，绝对不写容器临时路径。
+**容器是临时的。只有挂载的宿主路径才持久。** 凡是有价值的东西（模型、数据集、venv、代码、产出），**第一次下载 / 生成时就写到挂载的 Lustre 路径**，绝对不新写容器临时路径。
+
+`/root` 在远端容器里也是容器层/共享历史区，不是个人持久工作根。已有且完整的 `/root` / `/root/.cache` / `/root/...venv` 可以只读复用；一旦缺包、cache miss、要下载、要 `uv pip install` 或要建新 venv，`uv`、`pip`、`vllm`、HF、torch 的安装产物和 cache 根都必须显式指向当前机器的宿主挂载根（如 `/data/wzr`、`/home/wzr`、`/home/models`），禁止补装到 `/root`。
 
 ### 典型错误（野鸡程序员习惯）
 
@@ -16,6 +18,7 @@ type: rule
 |---|---|---|
 | 下 HF 模型 | `hf download ...`（默认 `~/.cache/huggingface` = 容器里 `/root/.cache`，**容器删就丢**） | `export HF_HOME=/home/models` **先**，再 `hf download --cache-dir /home/models/hub` |
 | pip install | `pip install foo`（进 `/usr/lib/python*/site-packages` = 容器层，重建丢） | venv 放 `/home/<user>/venvs/xxx` 或直接用镜像自带 `/app/vllm-omni/.venv` |
+| uv / vLLM install | 缺包后直接 `uv pip install vllm...`，默认写 `/root/.cache/uv` 或把 venv 建到 `/root/...` | 已有完整 `/root` venv/cache 可只读复用；缺包或新建时，先设 `UV_CACHE_DIR` / `PIP_CACHE_DIR` / `XDG_CACHE_HOME` 到宿主挂载根，再把 venv 建到 `/data/<user>/...` 或 `/home/<user>/...` |
 | git clone | `git clone ... /tmp/foo` 或 `~/foo` | clone 到 `/home/<YOUR_GROUP>/<user>/sources/` |
 | 临时输出 | `/tmp/output.json` | `/home/<user>/workspace/output.json` |
 | HuggingFace datasets | `~/.cache/huggingface/datasets` | `/home/models/hub` 下的 `datasets--*` 条目，跟模型放一起 |
@@ -30,6 +33,7 @@ export HF_HOME=/home/models
 # 2. 持久 pip/uv 缓存
 export PIP_CACHE_DIR=/home/<YOUR_GROUP>/<YOUR_USERNAME>/.cache/pip
 export UV_CACHE_DIR=/home/<YOUR_GROUP>/<YOUR_USERNAME>/.cache/uv
+export XDG_CACHE_HOME=/home/<YOUR_GROUP>/<YOUR_USERNAME>/.cache
 
 # 3. 持久 torch hub / torch compile
 export TORCH_HOME=/home/<YOUR_GROUP>/<YOUR_USERNAME>/.cache/torch
@@ -69,10 +73,21 @@ unset TRANSFORMERS_CACHE
 unset HF_HUB_CACHE
 export HF_HOME=/home/models   # 或节点对应的持久挂载路径
 
-# 验证
-python -c "import os; print('TRANSFORMERS_CACHE' in os.environ, 'HF_HUB_CACHE' in os.environ)"
-# 期望：False False
+# 新安装 / 新建 venv 前验证：目标不能含 /root
+python - <<'PY'
+import os, site
+keys = ["UV_CACHE_DIR", "PIP_CACHE_DIR", "XDG_CACHE_HOME", "HF_HOME", "TORCH_HOME"]
+for key in keys:
+    print(f"{key}={os.environ.get(key)}")
+print("site-packages=", site.getsitepackages())
+assert not any((os.environ.get(k) or "").startswith("/root") for k in keys)
+assert not any(path.startswith("/root") for path in site.getsitepackages())
+print("TRANSFORMERS_CACHE" in os.environ, "HF_HUB_CACHE" in os.environ)
+PY
+# 期望：cache/site-packages 不含 /root，最后一行 False False
 ```
+
+如果明确是复用已有 `/root` 环境，只做只读验证（例如 `python -c "import vllm; print(vllm.__version__)"` 或 `ls <existing-cache-path>`）；验证发现缺包 / 缺 shard / cache miss 时，停止复用并切到宿主挂载路径安装，不能在 `/root` 下补齐。
 
 单条命令时也可用 `env -u TRANSFORMERS_CACHE -u HF_HUB_CACHE python ...`。
 

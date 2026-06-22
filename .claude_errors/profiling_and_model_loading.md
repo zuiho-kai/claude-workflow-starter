@@ -112,3 +112,44 @@
 **根因**：不同环境下 transformers modules cache 路径不同，取决于 `HF_HOME` / `TRANSFORMERS_CACHE` / 默认值
 **解法**：看 traceback 里的实际文件路径，patch 那个路径。同时 patch snapshot 源文件防止被覆盖
 **对未来的提醒**：先跑一次看 traceback 确认实际加载路径，再 patch
+
+## 2026-06-17 — LTX2.3 开图 profiling 把 eager trace 和 graph benchmark 混成一个结论
+**症状**：用户要求看 LTX2.3 T2V 开图后的气泡和算子耗时。我先用已有 eager torch trace 分析了“气泡很多”，同时引用了开图 e2e benchmark 结果，导致表达上像是在分析开图 trace。用户追问后才确认本地和远端当时都没有可用的开图 `trace_rank*.json(.gz)`；已有完整 trace 来自 `/data/wzr/ltx23_t2v_offline_trace_20260616_142741`，脚本明确带 `--enforce-eager`。
+
+**根因**：
+- 没有先做 profiling artifact gate：没有逐项确认 trace 文件、run script、server log、`--enforce-eager` / `transformer compiled with torch.compile` 属于同一轮。
+- 把两个证据层混用：无 profiler steady benchmark 只能证明 e2e / qps，torch trace 才能证明算子和气泡。
+- 补跑时一开始没有复用已成功的 serving `/v1/videos/sync` benchmark 路径，而是写了 direct `Omni(...)` runner，worker 初始化 EOF，扩大了变量面。
+- 远端脚本 cleanup 只杀外层 PGID，没有复查实际 server PGID，导致 profiler server 进程残留，需要按本轮 PID/PGID 精确清理。
+
+**解法**：
+1. 先枚举远端所有 `trace_rank*.json(.gz)`，再读对应 `run*.sh` / `server.log`，确认没有现成开图 trace。
+2. 复用已经跑通的 serving benchmark 路径，只加 `--profiler-config` 和 online `/start_profile -> /v1/videos/sync -> /stop_profile`。
+3. 用 full-shape warmup 丢弃 cold compile/capture，再 profile 真实 512x384、25 frames、20 steps 请求。
+4. 交付前确认三类证据同轮一致：`transformer compiled with torch.compile`、`profiled_request.json` 成功、`trace_rank0.json.gz` 落盘并下载/解压。
+5. 清理时按实际 server PID/PGID 精确 kill，并复查 `nvidia-smi`，不能只依赖外层 shell PGID。
+
+**对未来的提醒**：
+- 用户说“开图后的气泡 / 算子耗时”时，必须先证明 trace 是 graph mode：无 `--enforce-eager`，日志有 `Model runner: transformer compiled with torch.compile`，trace 文件属于同一 run。
+- e2e/qps 和 profiler trace 必须分开汇报：e2e 用无 profiler steady benchmark；气泡/算子用 profiler 单请求 trace，并注明 profiler overhead。
+- 已有成功 benchmark 路径时，只做最小增量加 profiler，不换 runner、不重写入口。
+- 如果只有 benchmark stats 没有 trace，要直接说“当前没有 trace profiling artifact”，不能拿 benchmark 或其他模式 trace 补位。
+
+## 2026-06-17 — LTX2.3 mask-sync 优化看似减同步但会改精度
+**症状**：为减少 graph mode 下 prompt attention mask 的 `torch.any(~attention_mask)`、`_get_unpad_data()`、`.item()` 等重复同步，尝试在 LTX2.3 T2V 中提前把 `encoder_attention_mask` 包装成 `AttentionMetadata` 并传给 FlashAttention。单元测试能证明部分 mask 形状和值正确，但真实 LTX2.3 graph accuracy 失败：mask-sync candidate 的 PPM similarity 只有 SSIM `0.9338` / `0.9340`，低于 `0.94` 阈值。dtype-only 对照在同一 head `f19a26dd1448430346c5f31e9973ef6579895bbd` 上通过，SSIM `0.9634`、PSNR `36.67`，所以精度退化来自 mask-sync 实验，不是 dtype 前置 cast。
+
+**根因**：
+- 第一个实现直接从 pipeline/transformer 顶层构造 `AttentionMetadata`，绕过了 LTX2.3 原来的 `2D mask -> additive bias -> attn.prepare_attention_mask -> head view -> _to_padding_mask` 路径。原始 float `0/1` mask 如果直接走 `_to_padding_mask`，`0 >= 0` 会被当成 valid，padding 语义会错。
+- 第二个实现改成 additive mask 后再构造 metadata，但仍提前绕过每层 processor 的 mask prepare/shape path；真实 accuracy 仍失败，说明 LTX2.3 prompt mask 不能只靠“看起来等价的 2D padding mask”替代原路径。
+- 预计算 `_upad_input` 的 indices/cu_seqlens 不是唯一问题；即使只缓存 dense/has-padding 判断、不复用 unpad data，也会掉精度。
+
+**已验证证据**：
+- dtype-only PR 分支：`/data/wzr/wt-ltx23-t2v-graph-opt-pr4464-dtype`，run `/data/wzr/ltx23_dtype_only_pr4464_accuracy_candidate_20260617_170834`，`passes_thresholds=true`。
+- mask-sync full metadata candidate：`/data/wzr/ltx23_mask_sync_pr4464_accuracy_candidate_20260617_170042`，SSIM `0.9337558`，失败。
+- mask-sync dense-only candidate：`/data/wzr/ltx23_mask_sync_pr4464_accuracy_candidate_20260617_171809`，SSIM `0.9337558`，失败。
+- mask-sync after `attn.prepare_attention_mask` candidate：`/data/wzr/ltx23_mask_sync_pr4464_accuracy_candidate_20260617_172652`，SSIM `0.9340195`，失败。
+
+**遗留问题 / 禁止重复踩坑**：
+- 不要再从 LTX2.3 pipeline 或 transformer 顶层直接用 prompt mask 构造 `AttentionMetadata` 来替代 processor mask path，除非先做逐层对齐：baseline 与 candidate 的 `attention_mask` shape/value、backend branch、FlashAttention call 输入必须逐项一致。
+- mask 同步优化下一步只能在不改变原 mask path 的地方做，例如 backend 内部只优化 dense no-mask fast path、或在 processor 内缓存完全等价的 prepared mask，并先通过带 padding prompt 的 LTX2.3 graph accuracy。
+- 任何“mask 优化很快”的性能数字，在 accuracy 通过前都只能叫 invalid candidate，不能进入 PR、benchmark 表或对外结论。

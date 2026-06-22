@@ -4,8 +4,8 @@
 
 | 目录 | 何时来翻 |
 |------|----------|
-| [feedback/](feedback/_index.md) | **每次会话开头扫一眼**——执行原则、远端调试策略、对齐 PR 调试踩坑 |
-| [remote/](remote/_index.md) | SSH / docker / Slurm / 容器环境变量 / 退 srun 释放资源 |
+| [feedback/](feedback/_index.md) | **每次会话开头扫一眼**——执行原则、远端调试策略、PR 规格锚定、L2/L4 split、benchmark scope、对齐 PR 调试踩坑 |
+| [remote/](remote/_index.md) | SSH / docker / Slurm / 容器环境变量 / uv-vLLM cache 路径 / 退 srun 释放资源 |
 | [hf/](hf/_index.md) | HuggingFace 官方 baseline 对齐、prompt 模板、必修 bug fix |
 | [ci/](ci/_index.md) | 改 `tests/`、加 CI step、加 perf/accuracy 测试、新增 JSON 配置 |
 | [archive/hunyuan/](archive/hunyuan/_index.md) | HunyuanImage3 接入考古（alignment 盘点 / MoE router / AR↔DiT 桥接 / 双向注意力 / profiling），日常不读 |
