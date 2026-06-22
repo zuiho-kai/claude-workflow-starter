@@ -23,8 +23,34 @@ export HF_DATASETS_OFFLINE=1
 # Pass local absolute snapshot path instead of repo id
 model = YourFramework(model="<MODEL_CACHE_ROOT>/hub/models--<org>--<repo>/snapshots/<commit_hash>", ...)
 # 而不是
-model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已有 cache，仍可能联网  # ← 哪怕 HF_HOME 指向已有 cache，仍可能联网
+model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已有 cache，仍可能联网
 ```
+
+Remote GPU / e2e / large-model test runs must not start from "the cache should exist". Print and verify cache state first:
+
+```bash
+export HF_HOME=<MODEL_CACHE_ROOT>
+export HF_HUB_CACHE=<MODEL_CACHE_ROOT>/hub
+export HF_MODULES_CACHE=<MODEL_CACHE_ROOT>/modules
+export TRANSFORMERS_CACHE=<MODEL_CACHE_ROOT>/hub
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+```
+
+Then run a local-only probe before pytest, serving, generation, or benchmark commands:
+
+```bash
+python - <<'PY'
+from huggingface_hub import snapshot_download
+print(snapshot_download(
+    "<org>/<repo>",
+    cache_dir="<MODEL_CACHE_ROOT>/hub",
+    local_files_only=True,
+))
+PY
+```
+
+Default to a host-mounted cache root. An existing root cache, such as `/root/.cache/huggingface`, may be reused read-only only when a complete local snapshot is proven by `local_files_only=True` or by an explicit local snapshot path. If the root cache is missing shards, needs writes, needs downloads, or would become a new private cache root, stop before model loading.
 
 ## Why
 
@@ -32,7 +58,7 @@ model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已
 
 - HF Hub 库仍会去 hub.huggingface.co 校验该 revision 是否有更新
 - 任何 shard 不齐 / 哈希校验失败 → 自动重新下载
-- 远端节点墙外网络 + 大模型（） → **网络打满 + 磁盘 IO 打爆 → SSH 抖到 kex_exchange_identification 断开**
+- 远端节点墙外网络 + 大模型 → **网络打满 + 磁盘 IO 打爆 → SSH 抖到 kex_exchange_identification 断开**
 
 这跟 `TRANSFORMERS_CACHE / HF_HUB_CACHE 覆盖 HF_HOME` 的坑（A8 / [container_setup §2](container_setup.md)）是**两件事**：
 - A8 是「路径被覆盖找不到 cache」
@@ -43,7 +69,7 @@ model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已
 ### 触发场景
 
 - 远端 / 容器内**任何** `python ... profile / bench / generate / inference` 命令
-- 远端 `from_pretrained(...)` / 框架 init 调用 调用前
+- 远端 `from_pretrained(...)` / 框架 init 调用前
 - 写远端启动包装脚本时（`run_remote.sh` 等）
 
 ### 三层防御
@@ -71,7 +97,7 @@ model = YourFramework(model="<org>/<repo>", ...)  # ← 哪怕 HF_HOME 指向已
 ### 验证（每次新 venv / 新会话第一条命令）
 
 ```bash
-env | grep -E "HF_HUB_OFFLINE|TRANSFORMERS_OFFLINE|HF_HOME"
+env | grep -E "HF_HUB_OFFLINE|TRANSFORMERS_OFFLINE|HF_HOME|HF_HUB_CACHE|HF_MODULES_CACHE|TRANSFORMERS_CACHE|XDG_CACHE_HOME"
 # 期望同时看到：
 #   HF_HUB_OFFLINE=1
 #   TRANSFORMERS_OFFLINE=1
@@ -80,9 +106,22 @@ env | grep -E "HF_HUB_OFFLINE|TRANSFORMERS_OFFLINE|HF_HOME"
 
 任何一个缺失就**别跑模型加载命令**。
 
+For large remote model tests, also record:
+
+```text
+workdir / venv / python
+df -h
+GPU allocation
+CUDA_VISIBLE_DEVICES
+target local snapshot path
+root cache usage: no / read-only existing cache only
+local_files_only probe result
+```
+
 ## 历史踩坑
 
 - 新建 venv 跑 profile 脚本，只设 `HF_HOME=<MODEL_CACHE_ROOT>` 没设 offline，模型疑似触发重新下载 → 磁盘 IO + 网络拉满 → SSH `kex_exchange_identification: Connection closed by remote host`，短时间内连不上服务器
+- 大模型 e2e 只把 HF/cache 规则当背景约束，未先检查 mounted cache 或可只读复用的 root cache，也未做 `local_files_only` 探针；流程直接进入 venv / pytest，造成缺 cache 时重复下载风险
 - 类似坑参见 [[container_setup]] §2（cache 路径覆盖）
 
 ## 相关

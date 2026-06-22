@@ -24,6 +24,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - **P8 Reviewability matters**: names, ownership, reuse, tests, comments, API surface, and diff shape must make sense to a human reviewer.
 - **P9 Contract matrix**: for public fields, request keys, config, CLI, schema, or cross-module bridges, list ingress -> normalization -> owner -> consumer -> docs/tests before editing.
 - **P10 Public boundary**: public docs and PR text should contain mechanism, commands, versions, and reproducible evidence. Private hosts, local paths, cache paths, internal account details, and exploratory artifacts stay out.
+- **P11 Controlled agent loops**: sub-agents and loops are tools for reducing blind spots, not a default ritual. The main agent owns scope, final judgment, public text, commits, and pushes.
 
 ## 2. Hard Gates
 
@@ -34,6 +35,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - A smoke result such as shape-clean, strict-load, no-missing-weights, or no-NaN proves plumbing only. It does not prove semantic parity.
 - Crashes and `AttributeError` are trace points, not stop signs. Continue upstream until you know why that path received the wrong type or state.
 - If the user rejects the same conclusion twice, treat the user judgment as ground truth and re-check from evidence.
+- Use sub-agents only after defining objective, scope lock, evidence contract, stop condition, and escalation condition. Small reviewer follow-ups and explicit fast-path requests do not need a full audit loop.
 - Reviewer-facing conclusions should say what breaks, why it matters, and the smallest credible mitigation before internal terminology.
 
 ### 2.2 CI, Tests, And Benchmarks
@@ -54,7 +56,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Put complex remote commands into scripts. After upload, check byte count, first lines, and syntax before running.
 - Services and benchmarks need fail-fast gates: verify nontrivial CLI flags with `--help`, monitor health, PID, and known error signatures, and do a single-request smoke before sweeps.
 - New persistent content in containers belongs on a host-mounted path. Reuse complete existing container content read-only; do not install missing dependencies into container layers or root caches.
-- For offline model loads, set the project’s offline environment variables or pass a local snapshot path explicitly.
+- For offline model loads, set the project’s offline environment variables or pass a local snapshot path explicitly. Large-model remote runs need a cache preflight: print cache env, disk, GPU, target local path, and a `local_files_only` probe before serving, pytest, generation, or benchmark commands. Existing root cache may be reused read-only only when the snapshot is complete; missing shards or cache misses must fail instead of downloading.
 - Profiling requests require trace artifacts, not only benchmark stats. Before delivery, identify the trace files, event coverage, and resource cleanup evidence.
 - For graph or compiled profiling, prove the benchmark, trace, request, and server log are from the same run before making graph-mode conclusions.
 - Release resources explicitly: kill the process group or project process pattern, exit nested shells, then verify scheduler state and GPU memory.
@@ -72,6 +74,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Before pushing nontrivial code or tests, run a reviewer-lens audit: duplication, layering, edge cases, and surface area. Fix findings or document why not.
 - After rebase, cherry-pick, or conflict resolution, run a fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
 - Reviewer follow-up fixes can use a fast path: confirm finding -> minimal edit -> targeted test or blocker note -> lint touched files -> signed commit -> push.
+- Sub-agents must stay read-only unless the main agent explicitly assigns a local implementation task. They must not edit public PR bodies/comments, commit, push, merge, or resolve review threads.
 
 ### 2.5 Architecture And Package Management
 
@@ -87,6 +90,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Plan and validation: [memory/feedback/plan_and_validation.md](memory/feedback/plan_and_validation.md)
 - PR workflow: [memory/feedback/pr_workflow.md](memory/feedback/pr_workflow.md)
 - Reviewer lens: [memory/feedback/reviewer_lens_audit.md](memory/feedback/reviewer_lens_audit.md)
+- Agent loop workflow: [memory/feedback/agent_loop_workflow.md](memory/feedback/agent_loop_workflow.md)
 - Model adaptation PR guardrails: [memory/feedback/model_adaptation_pr_guardrails.md](memory/feedback/model_adaptation_pr_guardrails.md)
 - Upstream-first algorithm checks: [memory/feedback/upstream_first_for_algorithm.md](memory/feedback/upstream_first_for_algorithm.md)
 - Remote debugging: [memory/feedback/remote_debug_strategy.md](memory/feedback/remote_debug_strategy.md)

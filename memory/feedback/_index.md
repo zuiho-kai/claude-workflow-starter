@@ -10,6 +10,7 @@
 | [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up / rebase fresh review 的提交前路由 |
 | [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：侦察、fail-fast cleanup、profiling 状态机、trace quality gate |
 | [model_adaptation_pr_guardrails.md](model_adaptation_pr_guardrails.md) | 新模型 / 新 pipeline / 新 public entrypoint / 性能 claim PR 的 mini spec、checkpoint、entrypoint、evidence gate |
+| [agent_loop_workflow.md](agent_loop_workflow.md) | loop / sub-agent 使用门禁：scope lock、evidence contract、stop condition、main-agent 收口 |
 
 ## 调试方法论 / 接 HF 模型
 | 文件 | 一句话 |
@@ -28,6 +29,7 @@
 | [code_taste.md](code_taste.md) | **写代码前必读**：命名/归属/复用/测试位置/注释/API 面/diff 气味 |
 | [reviewer_lens_audit.md](reviewer_lens_audit.md) | 自审 + sub-agent review 必跑的 audit：duplication / layering / edge cases / surface area / contract matrix / rebase review |
 | [review_delegation_framing.md](review_delegation_framing.md) | spawn review sub-agent 时禁传自己 hypothesis；要么开放式 audit 要么并行多 framing union |
+| [agent_loop_workflow.md](agent_loop_workflow.md) | sub-agent 只交证据；公开动作、commit、push、review thread 由 main agent 收口 |
 
 ## 调试收敛 / 结论纪律
 | 文件 | 一句话 |
