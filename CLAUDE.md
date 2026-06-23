@@ -46,6 +46,8 @@
 - Benchmark 数字异常时先审请求链路，不先发明过滤口径。`mean >> median`、首条 measured 特慢、warmup/compile 被 reviewer 质疑时，必须沿 `config -> runner -> dataset -> RequestFuncInput -> backend payload/form -> server log` 证明 measured 请求真实携带 resolution/frames/fps/steps/seed/guidance 等字段；warmup shape 和 measured shape 不一致时，先修字段传播或配置语义，禁止先加 `ignore-first` / settle / baseline 放宽来掩盖。
 - 对齐别人 PR / benchmark 的性能数据时，PR body 只当摘要；必须读实际 config、runner/client 代码和结果 JSON，确认默认参数和请求字段。特别是 warmup、seed、guidance、negative prompt、request count、endpoint/polling 这些没写在 PR body 里的项。
 - 用户给出 PR / issue / “这个规格” 时，先锚定该对象的 source of truth，再回答或开跑：PR head、config、runner/client、artifact/result JSON。禁止先搜本地残留产物再反推用户要的规格。
+- L4 perf baseline 更新开跑 / 改数前必须先做 config scope discovery：用 `test_name` / model / CI step 搜完整同组 config（例如同一模型的 TP/PP/SP/CfgP 变体）并列出 scope lock，禁止只改第一个失败 JSON。
+- L4 perf baseline 证据只能来自对应 perf runner / result JSON 或用户明确给出的数值；functional L4 / step smoke / accuracy 只能作为功能验证，不能替代 perf baseline。已有 perf runner 必须先用仓库原命令跑；原命令跑不通时先修原命令或明确 blocker，禁止自造 wrapper / 临时 runner 掩盖问题。
 - L2/L4 测试拆分必须先定义证据边界：L2 只做 CPU/mock 功能与 shape/dtype/metadata，不进入真实 stage/device 初始化；L4 才跑真实权重 accuracy/perf/profiling。mock 权重不等于 CPU-only，只有不触发 runner/stage/GPU 初始化才算 L2 功能 guard。
 - 性能结果必须显式分类：`strict apples-to-apples`（同 model repo/snapshot + 同 pipeline 语义 + 同 request path + 同 defaults）、`workload-aligned only`（只同分辨率/帧数/steps/prompt）、`smoke only`（只证明能跑）。不是 strict apples-to-apples 时，禁止把差距解释成框架性能结论，只能说当前口径下的观测。
 - 性能结论必须来自正式 sweep；endpoint 探索和单请求 smoke 只能证明路径可用。`ttfc_count=0` / `tpot_count=0` 写 unavailable。
