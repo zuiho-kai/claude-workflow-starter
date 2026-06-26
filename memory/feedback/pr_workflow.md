@@ -14,6 +14,7 @@ This file is only a router. Before commit, push, PR body work, or reviewer follo
 | "Still not fixed", already-tested bugs, official-reference tests | [debugging_and_tests.md](pr_workflow/debugging_and_tests.md) |
 | PR template, rendered body checks, artifact and metric provenance | [pr_body_evidence.md](pr_workflow/pr_body_evidence.md) |
 | Reviewer asks to shrink scope, remove dead route, or avoid diff pollution | [scope_narrowing.md](pr_workflow/scope_narrowing.md) |
+| Multi-PR, stacked-PR, release-candidate, superseded PR, and merge vehicle decisions | [integration_pr_merge_vehicle.md](pr_workflow/integration_pr_merge_vehicle.md) |
 
 Hard-rule summary:
 
@@ -22,4 +23,5 @@ Hard-rule summary:
 - PR evidence must bind to head SHA, run SHA, artifact path, and metric validity.
 - PR bodies and comments must stay reviewer-facing; keep private local paths, remote hosts, cache paths, ports, account names, and probe noise out of public text.
 - After rebase, cherry-pick, or conflict resolution, run fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
+- Multi-PR or stacked-PR work must choose one merge vehicle. If an integration PR is chosen, narrow PRs become history/review references and should be marked superseded or closed after merge.
 - Reviewer follow-up fixes use the smallest credible edit plus targeted validation.

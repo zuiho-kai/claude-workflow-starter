@@ -25,6 +25,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - **P9 Contract matrix**: for public fields, request keys, config, CLI, schema, or cross-module bridges, list ingress -> normalization -> owner -> consumer -> docs/tests before editing.
 - **P10 Public boundary**: public docs and PR text should contain mechanism, commands, versions, and reproducible evidence. Private hosts, local paths, cache paths, internal account details, and exploratory artifacts stay out.
 - **P11 Controlled agent loops**: sub-agents and loops are tools for reducing blind spots, not a default ritual. The main agent owns scope, final judgment, public text, commits, and pushes.
+- **P12 User-visible acceptance**: tests passing is not enough for UI, CLI output, public docs, reports, screenshots, or artifacts. Inspect the real user-visible output before handing it back.
 
 ## 2. Hard Gates
 
@@ -36,6 +37,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Crashes and `AttributeError` are trace points, not stop signs. Continue upstream until you know why that path received the wrong type or state.
 - If the user rejects the same conclusion twice, treat the user judgment as ground truth and re-check from evidence.
 - Use sub-agents only after defining objective, scope lock, evidence contract, stop condition, and escalation condition. Small reviewer follow-ups and explicit fast-path requests do not need a full audit loop.
+- For UI, CLI output, public explanations, benchmark reports, screenshots, or visual artifacts, define the ordinary user path and inspect the current output/artifact before delivery. See [user_visible_acceptance](memory/feedback/user_visible_acceptance.md).
 - Reviewer-facing conclusions should say what breaks, why it matters, and the smallest credible mitigation before internal terminology.
 
 ### 2.2 CI, Tests, And Benchmarks
@@ -71,6 +73,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Evidence in PR bodies or comments needs provenance: PR head SHA, run checkout SHA, artifact path, timestamp, and metric validity.
 - PR bodies and comments should contain only reviewer-facing evidence. Do not publish local user paths, remote hostnames, cache paths, port numbers, private account names, or internal probe noise.
 - Small PRs should list the smallest real command that was run in `Test Plan`; `Test Result` should be a one-line statement of the core behavior covered.
+- Multi-PR, stacked-PR, or release-candidate work must choose one merge vehicle before ready/merge. If an integration PR is the vehicle, narrow PRs become history/review references and must be closed or marked superseded after merge. See [integration_pr_merge_vehicle](memory/feedback/pr_workflow/integration_pr_merge_vehicle.md).
 - Before pushing nontrivial code or tests, run a reviewer-lens audit: duplication, layering, edge cases, and surface area. Fix findings or document why not.
 - After rebase, cherry-pick, or conflict resolution, run a fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
 - Reviewer follow-up fixes can use a fast path: confirm finding -> minimal edit -> targeted test or blocker note -> lint touched files -> signed commit -> push.
@@ -91,6 +94,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - PR workflow: [memory/feedback/pr_workflow.md](memory/feedback/pr_workflow.md)
 - Reviewer lens: [memory/feedback/reviewer_lens_audit.md](memory/feedback/reviewer_lens_audit.md)
 - Agent loop workflow: [memory/feedback/agent_loop_workflow.md](memory/feedback/agent_loop_workflow.md)
+- User-visible acceptance: [memory/feedback/user_visible_acceptance.md](memory/feedback/user_visible_acceptance.md)
 - Model adaptation PR guardrails: [memory/feedback/model_adaptation_pr_guardrails.md](memory/feedback/model_adaptation_pr_guardrails.md)
 - Upstream-first algorithm checks: [memory/feedback/upstream_first_for_algorithm.md](memory/feedback/upstream_first_for_algorithm.md)
 - Remote debugging: [memory/feedback/remote_debug_strategy.md](memory/feedback/remote_debug_strategy.md)
