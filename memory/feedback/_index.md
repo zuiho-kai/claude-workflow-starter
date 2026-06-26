@@ -6,7 +6,7 @@
 |------|--------|
 | [execution_principles.md](execution_principles.md) | 执行类合集：简单方案优先 / 用户给方案直接执行 / 已知结论直接用 / 简短指令先还原意图 / 仓库上下文落盘写本仓长期记录 / IP+port 先 probe / 连环 dep 错别 bail / Windows 文本显式 UTF-8 |
 | [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试入口：基础侦察 / serving fail-fast cleanup / AR graph profiling / full pipeline benchmark 分页下钻 |
-| [pr_workflow.md](pr_workflow.md) | PR 工作流入口：branch-push-rebase / review-debug-test / PR body evidence / scope narrowing 分页下钻 |
+| [pr_workflow.md](pr_workflow.md) | PR 工作流入口：branch-push-rebase / review-debug-test / PR body evidence / scope narrowing / integration merge vehicle 分页下钻 |
 | [alignment_debug.md](alignment_debug.md) | vllm-omni ↔ HF 对齐调试合集：先 grep 显式随机源 / multimodal placeholder 改前读完整 routing / input 对齐 ≠ 输出对齐 / 拆账目别笼统归 BF16 |
 | [size_debug.md](size_debug.md) | 背景生图 / 多图尺寸与比例异常：按 prompt -> AR -> bridge -> DiT -> config/token 逐层 trace |
 | [style_bias_debug_methodology.md](style_bias_debug_methodology.md) | 风格/质量 bias 类 bug 第一步是静态 diff 不是 dump；MoE gate dtype / Norm / RoPE 是高 yield 区域 |
@@ -15,6 +15,8 @@
 | [codex_review_lessons.md](codex_review_lessons.md) | Codex review 学到的 2 个 API 设计习惯：从 producer 引 enum 不要 hardcode 字面值；暴露 enum 时也暴露 custom override escape hatch |
 | [seed_determinism_audit.md](seed_determinism_audit.md) | "同 seed 出不同图" 的 audit checklist：先确认 sampling 是 greedy 还是 stochastic；greedy 下漂移=CUDA/MoE non-det，不是 seed 代码 bug；别 P0 处理浪费时间 |
 | [systematic_vs_stochastic_divergence.md](systematic_vs_stochastic_divergence.md) | "路径 A 一直 X，路径 B 一直 Y" 是 systematic 不是 stochastic——禁止用 CUDA/MoE non-det 解释；AR 输入对齐要 prompt + image tensor + sampling 全部 3 pillar；PIL mode RGBA vs RGB 是 silent bug 源（PR #3444 实测踩坑）|
+| [agent_loop_workflow.md](agent_loop_workflow.md) | loop / sub-agent 使用门禁：什么时候值得开、什么时候走 fast path、sub-agent 只读查证不拍板，防止 scope drift 和公开口径混乱 |
+| [user_visible_acceptance.md](user_visible_acceptance.md) | 用户可见行为验收门禁：普通用户路径优先，agent 先看当前输出/截图/artifact，用户手工抓到漏检必须补 harness/check |
 | [review_delegation_framing.md](review_delegation_framing.md) | Spawn review sub-agent 时不能传自己的 hypothesis/focus；子 agent 严格在 prompt 框定的范围内审查，框外问题全漏。要么开放式 audit 要么并行多 framing union |
 | [reviewer_lens_audit.md](reviewer_lens_audit.md) | 自审 + sub-agent review 必跑的 4 条 audit：duplication / layering / edge cases / surface area。Sub-agent 说"OK"是弱信号；rebase 后要把 conflict/auto-merged 文件和 current reviewer threads 当 fresh diff 重审；merge 前还要跑 committer/project-owner framing |
 | [code_taste.md](code_taste.md) | **写代码前必读**：人工 reviewer 代码品味规则。命名必须说清机制，逻辑住在数据 owner，新增 helper 先 grep 复用，测试放行为 owner，注释解释策略，API knob 默认不加；新增执行路径必须复用 request parsing owner helper；shared serving/chat path 改 multimodal key 前必须 grep 跨模型 consumer |
