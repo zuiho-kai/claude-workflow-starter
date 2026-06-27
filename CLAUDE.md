@@ -7,7 +7,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 1. Read this file before doing repository work.
 2. Before writing code, tests, examples, API fields, CLI flags, or helpers, read [code_taste](memory/feedback/code_taste.md).
 3. Before remote, GPU, serving, or benchmark work, read [docs/remote_server.template.md](docs/remote_server.template.md) or your gitignored `docs/remote_server.md`, plus [remote_debug_strategy](memory/feedback/remote_debug_strategy.md).
-4. Before new model, new pipeline, new public entrypoint, or performance-claim PR work, read [model_adaptation_pr_guardrails](memory/feedback/model_adaptation_pr_guardrails.md) and write a short mini spec.
+4. Before new model, new pipeline, new public entrypoint, or performance-claim PR work, read [mini_spec](memory/feedback/mini_spec.md); if model/checkpoint details are involved, also read [model_adaptation_pr_guardrails](memory/feedback/model_adaptation_pr_guardrails.md).
 5. Before committing, pushing, rebasing, or opening a PR, re-read the Git / PR rules below. Commits must use DCO sign-off when the target project requires it.
 6. Before adding new memory or error-book entries, search [memory/MEMORY.md](memory/MEMORY.md). Append to an existing topic unless the new topic is reusable, general, and cannot fit anywhere else.
 7. Repository-specific lessons belong in repository-visible docs such as `memory/`, `.claude_errors/`, or `docs/`, not in a private agent memory store unless the repository explicitly asks for that.
@@ -24,7 +24,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - **P8 Reviewability matters**: names, ownership, reuse, tests, comments, API surface, and diff shape must make sense to a human reviewer.
 - **P9 Contract matrix**: for public fields, request keys, config, CLI, schema, or cross-module bridges, list ingress -> normalization -> owner -> consumer -> docs/tests before editing.
 - **P10 Public boundary**: public docs and PR text should contain mechanism, commands, versions, and reproducible evidence. Private hosts, local paths, cache paths, internal account details, and exploratory artifacts stay out.
-- **P11 Controlled agent loops**: sub-agents and loops are tools for reducing blind spots, not a default ritual. The main agent owns scope, final judgment, public text, commits, and pushes.
+- **P11 Controlled agent loops**: sub-agents and loops are tools for reducing blind spots, not a default ritual. For high-risk work, define objective, scope lock, evidence contract, budget/stop condition, checkpoint handoff, and escalation condition before looping. The main agent owns scope, final judgment, public text, commits, and pushes.
 - **P12 User-visible acceptance**: tests passing is not enough for UI, CLI output, public docs, reports, screenshots, or artifacts. Inspect the real user-visible output before handing it back.
 
 ## 2. Hard Gates
@@ -36,7 +36,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - A smoke result such as shape-clean, strict-load, no-missing-weights, or no-NaN proves plumbing only. It does not prove semantic parity.
 - Crashes and `AttributeError` are trace points, not stop signs. Continue upstream until you know why that path received the wrong type or state.
 - If the user rejects the same conclusion twice, treat the user judgment as ground truth and re-check from evidence.
-- Use sub-agents only after defining objective, scope lock, evidence contract, stop condition, and escalation condition. Small reviewer follow-ups and explicit fast-path requests do not need a full audit loop.
+- Use sub-agents only after defining objective, scope lock, evidence contract, budget/stop condition, checkpoint handoff, and escalation condition. If you use a sub-agent, write its delegation prompt first. Small reviewer follow-ups and explicit fast-path requests do not need a full audit loop.
 - For UI, CLI output, public explanations, benchmark reports, screenshots, or visual artifacts, define the ordinary user path and inspect the current output/artifact before delivery. See [user_visible_acceptance](memory/feedback/user_visible_acceptance.md).
 - Reviewer-facing conclusions should say what breaks, why it matters, and the smallest credible mitigation before internal terminology.
 

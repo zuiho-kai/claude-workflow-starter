@@ -1,55 +1,28 @@
-# PR Body Evidence
+# PR Body Entry
 
-## Template First
+Read the target repository's PR template before drafting. Match its sections and wording.
 
-Read the target repository's PR template before drafting. Match the repository's sections and wording.
+## Public Reproduction
 
-## Provenance Gate
+For e2e, accuracy, performance, or artifact claims, the PR body should contain only public or repo-relative information:
 
-Every performance, accuracy, image, or artifact claim should include:
+- command or repo-relative script;
+- relevant config path and key fields;
+- request construction;
+- metric calculation;
+- public reference or stable artifact URL;
+- pass/fail or measured result.
 
-- PR head SHA
-- run checkout SHA
-- command or script
-- artifact path
-- artifact timestamp or hash when relevant
-- run count and input scope
-- invalid or unavailable metrics
+Private machine, cwd, venv, host, port, account, cache, and scratch details belong in private notes, not public PR text. See [pr_body_privacy](pr_body_privacy.md).
 
-If any of these do not match, label the evidence as exploratory or rerun.
+## Render Gate
 
-## Public Boundary
+Before posting, verify code fences, tables, images, and bullets render correctly. Use a body file rather than fragile shell quoting when possible.
 
-PR bodies and comments should contain reviewer-facing evidence only:
+## Evidence Downshift
 
-- behavior changed
-- public command or test command
-- dependency versions when relevant
-- commit SHA or public run identifier
-- pass/fail result
-- metric class and validity
+- Performance / accuracy / image evidence: [pr_body_provenance](pr_body_provenance.md).
+- New model evidence split: [pr_body_model_evidence](pr_body_model_evidence.md).
+- Privacy boundary: [pr_body_privacy](pr_body_privacy.md).
 
-Keep these out of public PR text:
-
-- local user paths
-- remote hostnames, usernames, ports, or machine aliases
-- venv, cache, model-cache, or scratch paths
-- private account names or credential details
-- local dependency blockers that do not affect reviewers
-- exploratory probe noise and failed private attempts
-
-Private debugging context can guide the fix, but it should be summarized into reproducible public evidence before posting.
-
-## Small PR Shape
-
-For small bugfix or reviewer-follow-up PRs:
-
-- `Test Plan` should name the smallest real command that actually ran.
-- `Test Result` should be one sentence describing the core regression behavior covered by that command.
-- hygiene checks such as formatting, `compileall`, or `git diff --check` can be run privately, but they do not replace semantic validation.
-
-Only list individual test functions when reviewers need a case-by-case mapping. Otherwise prefer the file-level or target command that was run.
-
-## Rendered Check
-
-Before posting, check that tables, code fences, images, and bullet lists render correctly. A technically correct PR body that renders badly still costs reviewer time.
+Acceptance: the PR page reads like a reproducible reviewer report, not a chat log or work diary.
