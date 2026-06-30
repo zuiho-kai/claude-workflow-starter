@@ -7,6 +7,7 @@
 |------|--------|
 | [execution_principles.md](execution_principles.md) | 简单方案优先 / 用户给方案直接执行 / 已知结论直接用——执行类合集 |
 | [plan_and_validation.md](plan_and_validation.md) | plan 先 trace lifecycle；功能验证默认 e2e；benchmark/spec 先锁 source of truth；公开同步只保留机制层 |
+| [product_loop_planning.md](product_loop_planning.md) | parity / roadmap / product-book 先写用户可感知闭环，再拆技术 issue / PR / sub-agent |
 | [pr_workflow.md](pr_workflow.md) | worktree / push / PR body / reviewer follow-up / rebase fresh review 的提交前路由 |
 | [remote_debug_strategy.md](remote_debug_strategy.md) | 远端调试：侦察、fail-fast cleanup、profiling 状态机、trace quality gate |
 | [mini_spec.md](mini_spec.md) | 非平凡模型 / pipeline / public entrypoint / execution path / perf claim / docs-config 变更前的 canonical mini spec |

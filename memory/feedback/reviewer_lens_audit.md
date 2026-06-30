@@ -9,6 +9,30 @@ metadata:
 
 Generic "code check" prompts are weak. They usually answer only whether the patch looks plausible. Reviewer-lens audit makes the review dimensions explicit.
 
+## Classify First
+
+Do not start by hunting bugs. First classify what kind of system property changed, then choose the lenses.
+
+Minimum classification:
+
+```text
+Review risk tags:
+- public API / user-facing contract:
+- module semantic contract:
+- cross-module producer-consumer contract:
+- async / concurrency / scheduling:
+- resource lifetime / cleanup:
+- data format / serialization / IPC:
+- performance claim / benchmark evidence:
+- error handling / cancellation / timeout:
+- feature flag / config / default behavior:
+- backward compatibility:
+- test or validation evidence:
+Selected lenses:
+```
+
+If you did not write risk tags and selected lenses, call the result a partial review.
+
 ## Avoid These Prompts
 
 - "review this"
@@ -30,7 +54,9 @@ Use the explicit prompt in [reviewer_lens_prompt](reviewer_lens_prompt.md).
 
 - New model, pipeline, backend, or major path: run owner framing in [reviewer_lens_gates](reviewer_lens_gates.md).
 - Public API, extra field, processor kwarg, multimodal key, bridge, schema, streaming protocol: write the contract matrix in [reviewer_lens_contracts](reviewer_lens_contracts.md).
+- Async, concurrency, scheduler, IPC, shared resource, resource lifetime, GPU/CPU transfer, or performance claim: add a systems/runtime lens and, when evidence is involved, an evidence/benchmark lens.
 - Rebase, cherry-pick, full-diff review, finding closure, inline review: use [reviewer_lens_gates](reviewer_lens_gates.md).
+- If a reviewer or bot finds multiple meaningful issues after you authored the diff, treat that as an authoring-time self-review miss. Add a gate, test, harness, or code-structure change for the next similar diff.
 
 ## Finding Format
 
@@ -46,4 +72,4 @@ End with:
 AUDITS RUN: 1,2,3,4 — N findings (Pa P0, Pb P1, Pc P2)
 ```
 
-Sub-agent `OK` is not a test, benchmark, or proof. The main agent still verifies evidence and owns the final call.
+Sub-agent `OK` is not a test, benchmark, or proof. The main agent still verifies evidence, unions findings, and owns the final call.

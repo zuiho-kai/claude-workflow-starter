@@ -20,9 +20,9 @@ type: feedback
 **How to apply:**
 - 读文件：`Get-Content -Path <file> -Encoding utf8`
 - 写文件：`Set-Content -Path <file> -Encoding utf8` / `Out-File -Encoding utf8`
-- 本机已在用户级 PowerShell profile 里设置默认值：
-  - `C:\Users\user\Documents\WindowsPowerShell\profile.ps1`
-  - `C:\Users\user\Documents\PowerShell\profile.ps1`
+- On Windows, user-level PowerShell profiles commonly live under:
+  - `%USERPROFILE%\Documents\WindowsPowerShell\profile.ps1`
+  - `%USERPROFILE%\Documents\PowerShell\profile.ps1`
 - 如果只是终端显示乱码，可在当前 shell 先设：
   ```powershell
   $OutputEncoding = [System.Text.UTF8Encoding]::new($false)

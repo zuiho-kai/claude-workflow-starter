@@ -24,6 +24,43 @@ For runner, cache, shared execution state, pipeline, public API, batching, strea
 
 Pure typo, formatting, and non-behavior docs edits can skip this gate.
 
+## Systems / Runtime Lens
+
+Add this lens when the diff touches async, concurrency, scheduling, IPC, shared resources, locks, files, sockets, process/thread lifetime, GPU/CPU transfer, pinned memory, cache lifetime, or cleanup.
+
+Check:
+
+- producer and consumer lifecycle;
+- ownership of each resource;
+- cancellation, timeout, and error paths;
+- cleanup after partial failure;
+- race between success and teardown;
+- whether tests cover more than the happy path.
+
+Do not call the review complete if these paths are only inferred.
+
+## Evidence / Benchmark Lens
+
+Add this lens when the PR makes a performance, quality, accuracy, reliability, artifact, or user-visible claim.
+
+Check:
+
+- what version or commit was measured;
+- which command, config, request, and artifact produced the result;
+- whether smoke, workload-aligned, and strict apples-to-apples evidence are separated;
+- whether failed private attempts or local blockers leaked into public text;
+- whether the public claim can be reproduced or audited by a reviewer.
+
+## Authoring-Time Delta Audit
+
+When another reviewer or bot finds several meaningful issues in a diff you authored, do not treat it as merely "more thorough review". Before the next similar change, add an authoring-time checkpoint for the missed class:
+
+- owner and contract matrix before editing;
+- producer-consumer trace before adding fields;
+- state or lifecycle matrix before touching scheduling/resource code;
+- user-visible path and artifact check before public output changes;
+- targeted test or harness that would have caught the miss.
+
 ## Fix Closure Is Not Full Review
 
 After fixing a finding, review the new diff:

@@ -8,9 +8,10 @@ This file is the entrypoint for agents working in this repository. Keep it short
 2. Before writing code, tests, examples, API fields, CLI flags, or helpers, read [code_taste](memory/feedback/code_taste.md).
 3. Before remote, GPU, serving, or benchmark work, read [docs/remote_server.template.md](docs/remote_server.template.md) or your gitignored `docs/remote_server.md`, plus [remote_debug_strategy](memory/feedback/remote_debug_strategy.md).
 4. Before new model, new pipeline, new public entrypoint, or performance-claim PR work, read [mini_spec](memory/feedback/mini_spec.md); if model/checkpoint details are involved, also read [model_adaptation_pr_guardrails](memory/feedback/model_adaptation_pr_guardrails.md).
-5. Before committing, pushing, rebasing, or opening a PR, re-read the Git / PR rules below. Commits must use DCO sign-off when the target project requires it.
-6. Before adding new memory or error-book entries, search [memory/MEMORY.md](memory/MEMORY.md). Append to an existing topic unless the new topic is reusable, general, and cannot fit anywhere else.
-7. Repository-specific lessons belong in repository-visible docs such as `memory/`, `.claude_errors/`, or `docs/`, not in a private agent memory store unless the repository explicitly asks for that.
+5. Before product parity, roadmap, product-book, or experience-loop planning, read [product_loop_planning](memory/feedback/product_loop_planning.md).
+6. Before committing, pushing, rebasing, or opening a PR, re-read the Git / PR rules below. Commits must use DCO sign-off when the target project requires it.
+7. Before adding new memory or error-book entries, search [memory/MEMORY.md](memory/MEMORY.md). Append to an existing topic unless the new topic is reusable, general, and cannot fit anywhere else.
+8. Repository-specific lessons belong in repository-visible docs such as `memory/`, `.claude_errors/`, or `docs/`, not in a private agent memory store unless the repository explicitly asks for that.
 
 ## 1. Principles
 
@@ -26,6 +27,8 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - **P10 Public boundary**: public docs and PR text should contain mechanism, commands, versions, and reproducible evidence. Private hosts, local paths, cache paths, internal account details, and exploratory artifacts stay out.
 - **P11 Controlled agent loops**: sub-agents and loops are tools for reducing blind spots, not a default ritual. For high-risk work, define objective, scope lock, evidence contract, budget/stop condition, checkpoint handoff, and escalation condition before looping. The main agent owns scope, final judgment, public text, commits, and pushes.
 - **P12 User-visible acceptance**: tests passing is not enough for UI, CLI output, public docs, reports, screenshots, or artifacts. Inspect the real user-visible output before handing it back.
+- **P13 Product loop first**: for parity, roadmap, product-book, or target-experience work, describe the user-visible loop before splitting technical modules or PRs.
+- **P14 Authoring self-review**: when a reviewer or bot finds multiple meaningful issues in your diff, treat it as a missed authoring-time review. Move the lesson into code structure, tests, harnesses, CI gates, or a concrete review gate before the next similar change.
 
 ## 2. Hard Gates
 
@@ -37,6 +40,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Crashes and `AttributeError` are trace points, not stop signs. Continue upstream until you know why that path received the wrong type or state.
 - If the user rejects the same conclusion twice, treat the user judgment as ground truth and re-check from evidence.
 - Use sub-agents only after defining objective, scope lock, evidence contract, budget/stop condition, checkpoint handoff, and escalation condition. If you use a sub-agent, write its delegation prompt first. Small reviewer follow-ups and explicit fast-path requests do not need a full audit loop.
+- For product parity, roadmap, or target-experience work, write the ordinary user loop before technical slices: user action, system judgment, persistent state, future trigger, natural expression, user control, and acceptance evidence.
 - For UI, CLI output, public explanations, benchmark reports, screenshots, or visual artifacts, define the ordinary user path and inspect the current output/artifact before delivery. See [user_visible_acceptance](memory/feedback/user_visible_acceptance.md).
 - Reviewer-facing conclusions should say what breaks, why it matters, and the smallest credible mitigation before internal terminology.
 
@@ -74,7 +78,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - PR bodies and comments should contain only reviewer-facing evidence. Do not publish local user paths, remote hostnames, cache paths, port numbers, private account names, or internal probe noise.
 - Small PRs should list the smallest real command that was run in `Test Plan`; `Test Result` should be a one-line statement of the core behavior covered.
 - Multi-PR, stacked-PR, or release-candidate work must choose one merge vehicle before ready/merge. If an integration PR is the vehicle, narrow PRs become history/review references and must be closed or marked superseded after merge. See [integration_pr_merge_vehicle](memory/feedback/pr_workflow/integration_pr_merge_vehicle.md).
-- Before pushing nontrivial code or tests, run a reviewer-lens audit: duplication, layering, edge cases, and surface area. Fix findings or document why not.
+- Before pushing nontrivial code or tests, run a reviewer-lens audit: classify risk tags, select the needed lenses, then check duplication, layering, edge cases, and surface area. Fix findings or document why not.
 - After rebase, cherry-pick, or conflict resolution, run a fresh semantic review of conflict files, auto-merged touched files, and current non-outdated review threads.
 - Reviewer follow-up fixes can use a fast path: confirm finding -> minimal edit -> targeted test or blocker note -> lint touched files -> signed commit -> push.
 - Sub-agents must stay read-only unless the main agent explicitly assigns a local implementation task. They must not edit public PR bodies/comments, commit, push, merge, or resolve review threads.
@@ -95,6 +99,7 @@ This file is the entrypoint for agents working in this repository. Keep it short
 - Reviewer lens: [memory/feedback/reviewer_lens_audit.md](memory/feedback/reviewer_lens_audit.md)
 - Agent loop workflow: [memory/feedback/agent_loop_workflow.md](memory/feedback/agent_loop_workflow.md)
 - User-visible acceptance: [memory/feedback/user_visible_acceptance.md](memory/feedback/user_visible_acceptance.md)
+- Product loop planning: [memory/feedback/product_loop_planning.md](memory/feedback/product_loop_planning.md)
 - Model adaptation PR guardrails: [memory/feedback/model_adaptation_pr_guardrails.md](memory/feedback/model_adaptation_pr_guardrails.md)
 - Upstream-first algorithm checks: [memory/feedback/upstream_first_for_algorithm.md](memory/feedback/upstream_first_for_algorithm.md)
 - Remote debugging: [memory/feedback/remote_debug_strategy.md](memory/feedback/remote_debug_strategy.md)
