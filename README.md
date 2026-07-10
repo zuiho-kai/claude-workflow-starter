@@ -48,7 +48,7 @@ cd claude-workflow-starter
 | 多 agent 分工 | [agents](framework/agents/_index.md) | 通常不需要仓库补充 |
 | 需求拆分和执行计划 | [planning](framework/planning/_index.md) | 仓库入口中的业务主题 |
 
-固定顺序是“通用主题 → 当前仓库同主题 → 代码模块或模型”。先从上表选择通用主题，再从 [仓库列表](repos/_index.md) 找到当前仓库；仓库已登记时必须读取它的 `_index.md`、`rules.md` 和同主题入口，不能停在通用层。涉及源码时再从 `components/_index.md` 或 `models/_index.md` 选择已经存在的 owner，不为一次问题临时造模块。
+固定顺序是“通用主题 → 当前仓库同主题 → 代码模块或模型”。先从上表选择通用主题，再从 [仓库列表](repos/_index.md) 找到当前仓库；仓库已登记时必须读取它的 `_index.md`、`rules.md` 和同主题入口，不能停在通用层。涉及源码时再从 `components/_index.md` 或 `models/_index.md` 选择一个主要 owner，读完它已有的规则后停止横向展开；只有 live 调用链证明跨模块时才打开第二个目录。不为保险遍历所有模块，也不为一次问题临时造模块。
 
 不知道归属时，可以先全文搜索：
 

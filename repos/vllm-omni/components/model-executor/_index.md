@@ -1,11 +1,11 @@
 # Model Executor
 
 - 源码入口：`vllm_omni/model_executor/`
-- 主要职责：AR/LLM stage、stage 配置、输入处理和跨阶段数据桥接
+- 主要职责：AR/LLM stage、stage 配置、并行与设备启动、输入处理和跨阶段数据桥接
 
 ## 什么时候查这里
 
-- 调查模型执行 stage、stage config、输入处理器或 AR 到 diffusion 的共享桥接。
+- 调查模型执行 stage、stage config、并行度、设备映射、worker 启动、输入处理器或 AR 到 diffusion 的共享桥接。
 
 ## 不放什么
 
@@ -17,3 +17,4 @@
 | 遇到什么 | 查看哪里 |
 |---|---|
 | 理解共享职责和阶段边界 | [architecture](architecture.md) |
+| 修改或排查 stage 并行度、设备映射或启动校验 | [rules](rules.md) |
