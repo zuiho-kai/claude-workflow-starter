@@ -20,5 +20,4 @@
 | 遇到什么 | 查看哪里 |
 |---|---|
 | 理解共享职责和阶段边界 | [architecture](architecture.md) |
-| 修改 runner 预处理合同、逐行 phase 或 MTP 路由 | [rules](rules.md#runner-到模型的预处理合同) |
-| 修改或排查 stage 并行度、设备映射或启动校验 | [rules](rules.md#stage-并行度和设备容量必须一起验收) |
+| 修改 runner 预处理合同、逐行 phase、MTP 路由、stage 并行度、设备映射或启动校验 | [rules](rules.md) |

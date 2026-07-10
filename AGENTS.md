@@ -9,6 +9,6 @@ from an upstream URL, display name, or local directory. Once a repository rule
 directly identifies the owner, stop navigation. Never apply one repository's
 rules, machine paths, credentials, remotes, or model assumptions to another.
 
-Before adding or moving knowledge, read `CONTRIBUTING.md`, update the nearest `_index.md`, and run `python tools/check_knowledge_tree.py`.
+Before adding or moving knowledge, read the short `CONTRIBUTING.md` entry and only the relevant topic it links, update the nearest `_index.md`, and run `python tools/check_knowledge_tree.py`.
 
 Before committing or pushing, follow the target repository's own Git and identity rules. Do not inherit a commit identity, SSH host, remote, DCO requirement, or PR format from an unrelated repository entry.

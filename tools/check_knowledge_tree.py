@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""检查 framework/ 和 repos/ 的目录、索引与 Markdown 链接。"""
+"""检查 contributing/、framework/ 和 repos/ 的目录、索引与 Markdown 链接。"""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from urllib.parse import unquote
 
 
 ROOT = Path(__file__).resolve().parent.parent
-KNOWLEDGE_ROOTS = (ROOT / "framework", ROOT / "repos")
+KNOWLEDGE_ROOTS = (ROOT / "contributing", ROOT / "framework", ROOT / "repos")
 INDEX_NAME = "_index.md"
 SPECIAL_PAGES = {INDEX_NAME, "rules.md", "architecture.md"}
 GROUP_DIRS = {"guides", "history", "incidents", "references", "results", "rfcs"}
@@ -130,6 +130,19 @@ def check_links(path: Path) -> None:
             errors.append(f"链接不存在：{display(path)} -> {target}")
 
 
+def resolved_local_links(path: Path) -> list[Path]:
+    """返回页面中所有相对 Markdown 链接解析后的真实路径。"""
+    resolved: list[Path] = []
+    for raw_target in markdown_links(path):
+        target = local_target(raw_target)
+        if not target:
+            continue
+        if target.startswith(("/", "\\")) or re.match(r"^[A-Za-z]:[\\/]", target):
+            continue
+        resolved.append((path.parent / target).resolve())
+    return resolved
+
+
 def has_markdown(path: Path) -> bool:
     return any(path.rglob("*.md"))
 
@@ -221,23 +234,37 @@ def check_directory(directory: Path) -> None:
         index_text = ""
     else:
         index_text = read_text(index)
+    index_targets = resolved_local_links(index) if index.is_file() else []
 
     for page in direct_pages:
         check_links(page)
         check_file_size(page, index_text)
         check_sensitive_text(page)
         check_dangerous_commands(page)
-        if page.name != INDEX_NAME and page.name not in index_text:
-            errors.append(f"页面没有登记到当前目录索引：{display(page)}")
+        if page.name != INDEX_NAME:
+            registrations = index_targets.count(page.resolve())
+            if registrations == 0:
+                errors.append(f"页面没有登记到当前目录索引：{display(page)}")
+            elif registrations > 1:
+                errors.append(
+                    f"页面在当前目录索引中重复登记：{display(page)} "
+                    f"({registrations} 个链接)"
+                )
         if directory.name == "incidents" and page.name != INDEX_NAME:
             check_incident(page)
 
     for child in child_dirs:
-        expected = f"{child.name}/{INDEX_NAME}"
-        if expected not in index_text.replace("\\", "/"):
+        child_index = (child / INDEX_NAME).resolve()
+        registrations = index_targets.count(child_index)
+        if registrations == 0:
             errors.append(
                 f"子目录没有登记到上一层索引：{display(child)} "
-                f"(应在 {display(index)} 链接 {expected})"
+                f"(应在 {display(index)} 链接 {child.name}/{INDEX_NAME})"
+            )
+        elif registrations > 1:
+            errors.append(
+                f"子目录在上一层索引中重复登记：{display(child)} "
+                f"({registrations} 个链接)"
             )
 
     ordinary_pages = [page for page in direct_pages if page.name not in SPECIAL_PAGES]
@@ -270,6 +297,21 @@ def check_local_is_untracked() -> None:
         errors.append(f"local/ 中存在被 Git 跟踪的文件：{path}")
 
 
+def check_short_contributing_entry() -> None:
+    path = ROOT / "CONTRIBUTING.md"
+    if not path.is_file():
+        errors.append("缺少根贡献入口：CONTRIBUTING.md")
+        return
+    text = read_text(path)
+    non_empty_lines = sum(1 for line in text.splitlines() if line.strip())
+    byte_size = path.stat().st_size
+    if non_empty_lines > 100 or byte_size > 8 * 1024:
+        errors.append(
+            "根贡献入口过长，细则必须下沉到 contributing/："
+            f"{non_empty_lines} 个非空行，{byte_size} bytes"
+        )
+
+
 def main() -> int:
     for root in KNOWLEDGE_ROOTS:
         if not root.is_dir():
@@ -282,6 +324,7 @@ def main() -> int:
     excluded_parts = {
         ".git",
         "artifacts",
+        "contributing",
         "framework",
         "local",
         "outputs",
@@ -296,6 +339,7 @@ def main() -> int:
         check_sensitive_text(path)
 
     check_local_is_untracked()
+    check_short_contributing_entry()
 
     for message in warnings:
         print(f"提醒：{message}")

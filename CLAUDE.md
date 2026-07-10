@@ -76,7 +76,7 @@
 
 用户要求“复盘”时，必须回答为什么发生、为什么原有规则或测试没有发现、怎样提前阻止，并把可执行结论写进最近 owner 的 `rules.md`。只有事故过程本身仍有独立查询价值时，才同时保留一篇 incident 并从规则链接过去。
 
-长期知识禁止写入系统、全局或个人 memory 位置。新增、移动、拆分或删除 Markdown 前读 [CONTRIBUTING.md](CONTRIBUTING.md)，同步最近的 `_index.md`，然后运行：
+长期知识禁止写入系统、全局或个人 memory 位置。新增、移动、拆分或删除 Markdown 前先读短入口 [CONTRIBUTING.md](CONTRIBUTING.md)，再按任务只读它链接的一篇专题规范；同步最近的 `_index.md`，然后运行：
 
 ```powershell
 python tools/check_knowledge_tree.py

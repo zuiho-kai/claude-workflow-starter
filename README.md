@@ -17,7 +17,7 @@ cd claude-workflow-starter
 
 最短接入流程：
 
-1. 把 `AGENTS.md`、`CLAUDE.md`、`README.md`、`CONTRIBUTING.md`、`framework/` 和 `tools/check_knowledge_tree.py` 复制或合并到目标仓库根目录。已有同名规则时先合并，不要直接覆盖。
+1. 把 `AGENTS.md`、`CLAUDE.md`、`README.md`、`CONTRIBUTING.md`、`contributing/`、`framework/` 和 `tools/check_knowledge_tree.py` 复制或合并到目标仓库根目录。已有同名规则时先合并，不要直接覆盖。
 2. 在目标仓库的 `.gitignore` 中加入 `local/`；机器地址、账号、cache 和 venv 只写 `local/`。
 3. 新建 `repos/_index.md` 和 `repos/<你的仓库>/_index.md`。如果 fork 了本仓，删除与你无关的 `repos/vllm-omni/`、`repos/jianghan-roleplay-data-pipeline/`，并同步 `repos/_index.md`。
 4. 只有该仓库确实有每次开工都必须执行的专属门禁时，才新建 `repos/<你的仓库>/rules.md`，并从仓库 `_index.md` 链接它。
@@ -29,9 +29,8 @@ cd claude-workflow-starter
 ## 从哪里查
 
 - [通用经验](framework/_index.md)：review、CI、docs、Git、debug、benchmark、环境、远端、agent 和规划。
-- [仓库经验](repos/_index.md)：当前登记了 vLLM-Omni 和 Jianghan。
-- [HunyuanImage3](repos/vllm-omni/models/hunyuan-image3/_index.md)：模型架构、HF 对齐、历史分析和错题。
-- [贡献与目录维护](CONTRIBUTING.md)：内容放哪里、错题怎么写、什么时候拆分、怎样更新索引。
+- [仓库经验](repos/_index.md)：从仓库列表进入当前实际保留的仓库、代码模块和模型；第三方接入后以自己的列表为准。
+- [贡献与目录维护](CONTRIBUTING.md)：短入口会按任务带你进入归属、页面、复盘、拆分或校验规范，不要求整套通读。
 
 ### 按任务找入口
 
@@ -84,7 +83,7 @@ local/                                    # 当前机器信息，Git 忽略
    python tools/check_knowledge_tree.py
    ```
 
-具体的 `_index.md` 写法和目录示例见 [贡献与目录维护](CONTRIBUTING.md)。也可以直接参考现有同类目录。
+具体的 `_index.md` 写法和目录示例见 [页面写法](contributing/page-rules.md)。也可以直接参考现有同类目录。
 
 ## 复盘和沉淀
 
@@ -99,7 +98,7 @@ local/                                    # 当前机器信息，Git 忽略
 
 按已经验证的根因归属，不按用户最先看到现象的位置归属。例如前端看到 API 404，不等于根因一定在 frontend。根因未明时默认继续调查；只有用户要求保留过程记录时，才暂放仓库对应工作主题并标记“待归类”。
 
-文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](CONTRIBUTING.md#正文模板) 编写。一件事故只保留一篇完整正文，并链接已经提炼的规则；正常任务仍从规则开始，不要求先找到事故文件。
+文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](contributing/incidents.md#正文模板) 编写。一件事故只保留一篇完整正文，并链接已经提炼的规则；正常任务仍从规则开始，不要求先找到事故文件。
 
 ## 内容多了怎样拆
 
@@ -142,6 +141,7 @@ python tools/check_knowledge_tree.py
 | 仓库、代码模块、模型和错题 | `repos/` |
 | 当前机器信息 | `local/`（Git ignored） |
 | 贡献与目录维护 | `CONTRIBUTING.md` |
+| 贡献专题规范 | `contributing/` |
 | 索引检查 | `tools/check_knowledge_tree.py` |
 
 框架目标只有一个：让人和 agent 都能沿清晰入口找到需要的最少内容，并且让新经验在下一次任务中真正可查。
