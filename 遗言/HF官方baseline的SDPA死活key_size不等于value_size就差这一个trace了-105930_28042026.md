@@ -155,7 +155,7 @@ python /tmp/bench_hf_trace.py
 | `torch_traces/tp4_fp8/.../trace_rank{0-3}.json` | tp4_fp8 torch profiler trace（chrome://tracing 可视化） |
 | `torch_traces/tp4_fp8/.../profiler_out_{0-3}.txt` | tp4_fp8 profiler 摘要 |
 | `run_diffusion_profiling.txt` | vllm-omni profiling 脚本（bash） |
-| `analyze_torch_trace.py` | trace 分析脚本 |
+| `analyze_torch_trace.py` | 当时使用的临时 trace 分析脚本，现已从框架仓库删除 |
 | `bench_hf_trace.py` | HF 官方 torch profiler 脚本（已上传远端 /tmp/） |
 | `bench_hf_dit_only.py` | DiT-only benchmark 脚本（未跑通） |
 | `patch_attn_mask.py` | attn_mask dtype patch 脚本 |

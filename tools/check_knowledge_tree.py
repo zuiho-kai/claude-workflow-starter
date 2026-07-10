@@ -230,7 +230,6 @@ def main() -> int:
         "local",
         "outputs",
         "repos",
-        "templates",
         "遗言",
     }
     for path in ROOT.rglob("*.md"):

@@ -16,7 +16,7 @@ cd claude-workflow-starter
 - [通用经验](framework/_index.md)：review、CI、docs、Git、debug、benchmark、环境、远端、agent 和规划。
 - [仓库经验](repos/_index.md)：当前登记了 vLLM-Omni 和 Jianghan。
 - [HunyuanImage3](repos/vllm-omni/models/hunyuan-image3/_index.md)：模型架构、HF 对齐、历史分析和错题。
-- [目录维护规则](docs/framework_layout.md)：内容放哪里、错题怎么写、什么时候拆分、怎样更新索引。
+- [贡献与目录维护](CONTRIBUTING.md)：内容放哪里、错题怎么写、什么时候拆分、怎样更新索引。
 
 不知道归属时，可以先全文搜索：
 
@@ -48,7 +48,7 @@ local/                                    # 当前机器信息，Git 忽略
    python tools/check_knowledge_tree.py
    ```
 
-也可以从 `templates/` 复制最接近的例子；不用模板也能完整手工添加。
+具体的 `_index.md` 写法和目录示例见 [贡献与目录维护](CONTRIBUTING.md)。也可以直接参考现有同类目录。
 
 ## 新增错题
 
@@ -59,7 +59,7 @@ local/                                    # 当前机器信息，Git 忽略
 - 多模型共享代码错误 → `repos/<仓库>/components/<模块>/incidents/`
 - 模型专有错误 → `repos/<仓库>/models/<模型>/incidents/`
 
-文件名使用 `YYYY-MM-DD-short-name.md`，正文从 [错题模板](templates/incident.md) 开始。一件事故只保留一篇完整正文，其他目录用链接指过去。
+文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](CONTRIBUTING.md#正文模板) 编写。一件事故只保留一篇完整正文，其他目录用链接指过去。
 
 ## 内容多了怎样拆
 
@@ -72,11 +72,7 @@ local/                                    # 当前机器信息，Git 忽略
 
 ## 当前机器信息
 
-真实服务器地址、账号、token、私钥、cache 和 venv 路径只放 Git 忽略的 `local/`。可以从模板开始：
-
-```powershell
-Copy-Item templates/remote-server.md local/remote.md
-```
+真实服务器地址、账号、token、私钥、cache 和 venv 路径只放 Git 忽略的 `local/`。需要时直接创建 `local/remote.md`，按机器或完整 `user@host:port` 分段记录；该文件不能被 Git 跟踪。
 
 正式知识页面不得包含私人 host、凭据或用户绝对路径。去除敏感信息后仍有复用价值的教训，再写入 `framework/` 或 `repos/`。
 
@@ -104,9 +100,8 @@ python tools/check_knowledge_tree.py
 | 开工硬规则 | `CLAUDE.md` |
 | 通用经验 | `framework/` |
 | 仓库、代码模块、模型和错题 | `repos/` |
-| 可复制模板 | `templates/` |
 | 当前机器信息 | `local/`（Git ignored） |
-| 目录设计 | `docs/framework_layout.md` |
+| 贡献与目录维护 | `CONTRIBUTING.md` |
 | 索引检查 | `tools/check_knowledge_tree.py` |
 
 框架目标只有一个：让人和 agent 都能沿清晰入口找到需要的最少内容，并且让新经验在下一次任务中真正可查。

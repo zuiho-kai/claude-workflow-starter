@@ -1,6 +1,6 @@
 # vLLM-Omni 工作目录启动门禁
 
-本文件只放必须先执行的硬门禁。通用方法下钻到 `framework/`，仓库、代码模块、模型和错题下钻到 `repos/`；目录维护规则见 `docs/framework_layout.md`。
+本文件只放必须先执行的硬门禁。通用方法下钻到 `framework/`，仓库、代码模块、模型和错题下钻到 `repos/`；目录维护规则见 `CONTRIBUTING.md`。
 
 ## 0. 开工顺序
 
@@ -106,4 +106,4 @@
 - vLLM-Omni 性能指南与错题：[repos/vllm-omni/benchmark/_index.md](repos/vllm-omni/benchmark/_index.md)
 - HunyuanImage3：[repos/vllm-omni/models/hunyuan-image3/_index.md](repos/vllm-omni/models/hunyuan-image3/_index.md)
 - 当前机器信息：ignored `local/remote.md`
-- 目录维护规则：[docs/framework_layout.md](docs/framework_layout.md)
+- 贡献与目录维护：[CONTRIBUTING.md](CONTRIBUTING.md)

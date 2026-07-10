@@ -23,7 +23,7 @@ allowed-tools:
 4. 根因只属于某个模型 → `repos/<仓库>/models/<模型>/`。
 5. 当前机器地址、账号、cache 或 venv → ignored `local/`，不进入知识页面。
 
-具体失败写到最近目录的 `incidents/`；稳定方法写到 guide、rules 或 architecture。完整规则见 `docs/framework_layout.md`。
+具体失败写到最近目录的 `incidents/`；稳定方法写到 guide、rules 或 architecture。完整规则见 `CONTRIBUTING.md`。
 
 ## 写之前
 
@@ -34,7 +34,7 @@ allowed-tools:
 
 ## 错题格式
 
-从 `templates/incident.md` 开始，一篇只写一件事故。至少包含：
+按 `CONTRIBUTING.md` 的错题正文格式编写，一篇只写一件事故。至少包含：
 
 - 编号；
 - 归属；

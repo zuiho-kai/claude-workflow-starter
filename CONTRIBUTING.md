@@ -1,6 +1,6 @@
-# 知识框架目录设计
+# 贡献与知识目录维护
 
-状态：**已实施，2026-07-10。本文同时作为目录维护规范。**
+本文是新增、移动、拆分知识页面时必须遵守的维护规范。
 
 ## 1. 设计目标
 
@@ -20,6 +20,7 @@
 ```text
 CLAUDE.md                              # 很短的总入口和必须遵守的规则
 README.md
+CONTRIBUTING.md                        # 目录维护和手工添加规则
 
 framework/                            # 换一个仓库仍然成立的通用经验
   _index.md
@@ -95,13 +96,6 @@ repos/                                # 每个仓库自己的经验
     rules.md
     pipeline/
       _index.md
-
-templates/                            # 可直接复制的目录和页面模板
-  topic/                               # review、CI、docs 等主题目录模板
-  repo/                                # 仓库目录模板
-  component/                           # 前端、后端、diffusion 等代码模块模板
-  model/                               # 模型目录模板
-  incident.md                          # 错题页面模板
 
 local/                                # Git 忽略，只放当前机器的信息
 tools/
@@ -208,6 +202,32 @@ repos/vllm-omni/models/hunyuan-image3/
 - 依赖哪些代码模块；
 - checkpoint、尺寸或量化版本之间的差异。
 
+### `architecture.md` 页面
+
+代码模块的 `architecture.md` 至少写清：
+
+```markdown
+# <代码模块名称>架构
+
+## 职责和边界
+## 主要源码和调用入口
+## 数据怎样流动
+## 怎样验证
+```
+
+模型的 `architecture.md` 至少写清：
+
+```markdown
+# <模型名称>架构
+
+## 模型专有部分与共享模块的边界
+## 配置、checkpoint 和兼容范围
+## 从输入到输出的主要流程
+## 怎样验证功能、精度和性能
+```
+
+标题下面必须写真实内容，不能提交只有占位符的空架构页面。
+
 ## 5. 每一层默认放什么
 
 ### 通用主题：`framework/<主题>/`
@@ -278,6 +298,25 @@ architecture.md
 - 本机临时状态。
 
 `local/` 不保存通用教训或错题正文，不被任何正式 `_index.md` 链接，并且不能有被 Git 跟踪的文件。
+
+需要记录远端环境时，直接创建 ignored `local/remote.md`。按完整连接目标分段，避免不同机器的信息串用：
+
+```markdown
+# 当前远端环境
+
+## <user@host:port>
+
+- 登录别名：
+- 计算节点或资源方式：直接使用 / Slurm / 其他
+- 持久化工作目录：
+- 容器：
+- Python 或 venv：
+- 模型和依赖 cache：
+- 最近验证日期：
+- 备注：
+```
+
+这里只记录当前机器事实。密码、token 和私钥正文不要复制进命令或公开页面；可记录凭据由哪个本机安全工具管理。
 
 ## 6. 错题本怎么放
 
@@ -490,7 +529,7 @@ repos/acme/
 
 ### 新增一个仓库、主题、代码模块或模型
 
-1. 可以复制 `templates/` 中最接近的示例，也可以手工创建目录。
+1. 从现有同类目录复制最小结构，或按本文示例手工创建目录。
 2. 创建 `_index.md`，写清“什么时候查”“不放什么”和“目录内容”。
 3. 在上一层 `_index.md` 增加入口。
 4. 添加真实内容，不提交空目录。
@@ -503,7 +542,7 @@ repos/acme/
 3. 如果达到文件或目录拆分数字，同一次修改完成整理。
 4. 运行检查脚本。
 
-目录名统一使用小写英文、数字和短横线，例如 `remote-debug`。同一层不能重名。`_index`、`local`、`components`、`models`、`incidents`、`guides`、`templates` 是框架已有名字，不用于自定义主题名。
+目录名统一使用小写英文、数字和短横线，例如 `remote-debug`。同一层不能重名。`_index`、`local`、`components`、`models`、`incidents`、`guides` 是框架已有名字，不用于自定义主题名。
 
 添加新目录不需要修改检查脚本中的固定名单；只要上一层 `_index.md` 能找到它即可。
 
@@ -570,4 +609,4 @@ rg "SSH timeout|shape mismatch" framework repos -g "*.md"
 - 全局全文搜索可以找到 `framework/` 和 `repos/` 下的所有正式经验。
 - `local/` 没有被 Git 跟踪的文件，`CLAUDE.md` 仍然只是短入口。
 
-本规范已经实施。后续结构调整必须先修改本文，再在同一次变更中更新模板、检查脚本和受影响索引。
+后续结构调整必须先修改本文，再在同一次变更中更新检查脚本和受影响索引。
