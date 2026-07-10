@@ -1,6 +1,6 @@
 # Workflow Starter
 
-这是一套可以直接用 Markdown 手工维护的项目知识框架。它把跨仓库通用方法、仓库专有经验、代码模块、模型和错题放在一棵目录树中，避免每次任务把无关内容全部加载。
+这是一套可以直接用 Markdown 手工维护的项目知识框架。它把跨仓库通用方法、仓库专有规则、代码模块、模型和可选历史案例放在一棵目录树中，避免每次任务把无关内容全部加载。
 
 ## 开始使用
 
@@ -21,7 +21,7 @@ cd claude-workflow-starter
 2. 在目标仓库的 `.gitignore` 中加入 `local/`；机器地址、账号、cache 和 venv 只写 `local/`。
 3. 新建 `repos/_index.md` 和 `repos/<你的仓库>/_index.md`。如果 fork 了本仓，删除与你无关的 `repos/vllm-omni/`、`repos/jianghan-roleplay-data-pipeline/`，并同步 `repos/_index.md`。
 4. 只有该仓库确实有每次开工都必须执行的专属门禁时，才新建 `repos/<你的仓库>/rules.md`，并从仓库 `_index.md` 链接它。
-5. 按实际需要增加主题、`components/<模块>/`、`models/<模型>/` 和 `incidents/`；不要预建空目录。
+5. 按实际需要增加主题、`components/<模块>/`、`models/<模型>/` 和规则；只有复杂历史证据需要长期保留时才增加 `incidents/`，不要预建空目录。
 6. 运行 `python tools/check_knowledge_tree.py`，确认索引、链接和目录结构完整。
 
 根 `AGENTS.md` 和 `CLAUDE.md` 必须保持仓库中性。模型、GPU、工作目录、Git 身份、专用 remote 和 PR 格式等规则只能放到对应 `repos/<仓库>/` 或 ignored `local/`，不能重新堆回根入口。
@@ -35,7 +35,7 @@ cd claude-workflow-starter
 
 ### 按任务找入口
 
-| 你正在做什么 | 先看通用入口 | 当前仓库有特殊规则时再看 |
+| 你正在做什么 | 先看通用入口 | 识别仓库后必须检查 |
 |---|---|---|
 | code review、边界和公开接口 | [review](framework/review/_index.md) | `repos/<仓库>/review/` |
 | 测试和 CI | [ci](framework/ci/_index.md) | `repos/<仓库>/ci/` |
@@ -48,7 +48,7 @@ cd claude-workflow-starter
 | 多 agent 分工 | [agents](framework/agents/_index.md) | 通常不需要仓库补充 |
 | 需求拆分和执行计划 | [planning](framework/planning/_index.md) | 仓库入口中的业务主题 |
 
-固定顺序是“通用主题 → 当前仓库 → 代码模块或模型”。先从上表选择通用主题，再从 [仓库列表](repos/_index.md) 找到当前仓库；只有问题明确属于共享源码模块或某个模型时，才继续进入 `components/` 或 `models/`。
+固定顺序是“通用主题 → 当前仓库同主题 → 代码模块或模型”。先从上表选择通用主题，再从 [仓库列表](repos/_index.md) 找到当前仓库；仓库已登记时必须读取它的 `_index.md`、`rules.md` 和同主题入口，不能停在通用层。涉及源码时再从 `components/_index.md` 或 `models/_index.md` 选择已经存在的 owner，不为一次问题临时造模块。
 
 不知道归属时，可以先全文搜索：
 
@@ -63,7 +63,7 @@ framework/<主题>/                         # 换仓库仍然成立
 repos/<仓库>/<主题>/                      # 某仓库专有流程
 repos/<仓库>/components/<代码模块>/       # 前端、后端、diffusion 等共享代码
 repos/<仓库>/models/<模型>/               # 模型专有实现和配置
-<最近目录>/incidents/                     # 具体错题
+<最近目录>/incidents/                     # 可选的复杂历史证据，不是默认规则入口
 local/                                    # 当前机器信息，Git 忽略
 ```
 
@@ -82,18 +82,20 @@ local/                                    # 当前机器信息，Git 忽略
 
 具体的 `_index.md` 写法和目录示例见 [贡献与目录维护](CONTRIBUTING.md)。也可以直接参考现有同类目录。
 
-## 新增错题
+## 复盘和沉淀
 
-错题按根因放在最近的 `incidents/`：
+复盘的默认产物是最近 owner 的 `rules.md`。先回答为什么发生、为什么以前没发现、怎样提前阻止、怎样验收，再把可重复执行的结论写成规则。只有复现链、日志证据或历史背景很复杂，规则无法承载且以后仍可能重新取证时，才额外新增错题。
+
+确实需要错题时，按根因放在最近的 `incidents/`：
 
 - 通用 SSH、WSL、PowerShell 或 Git 错误 → `framework/<主题>/incidents/`
 - 仓库 CI、benchmark、review 或 remote 错误 → `repos/<仓库>/<主题>/incidents/`
 - 多模型共享代码错误 → `repos/<仓库>/components/<模块>/incidents/`
 - 模型专有错误 → `repos/<仓库>/models/<模型>/incidents/`
 
-按已经验证的根因归属，不按用户最先看到现象的位置归属。例如前端看到 API 404，不等于根因一定在 frontend；根因未明时先放仓库对应工作主题的 `incidents/`，状态写“待归类”，查清后再移动。
+按已经验证的根因归属，不按用户最先看到现象的位置归属。例如前端看到 API 404，不等于根因一定在 frontend。根因未明时默认继续调查；只有用户要求保留过程记录时，才暂放仓库对应工作主题并标记“待归类”。
 
-文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](CONTRIBUTING.md#正文模板) 编写。一件事故只保留一篇完整正文，其他目录用链接指过去。
+文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](CONTRIBUTING.md#正文模板) 编写。一件事故只保留一篇完整正文，并链接已经提炼的规则；正常任务仍从规则开始，不要求先找到事故文件。
 
 ## 内容多了怎样拆
 

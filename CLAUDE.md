@@ -5,15 +5,15 @@
 ## 0. 开工顺序
 
 1. 确认用户正在操作哪个真实仓库；不要用当前 shell 路径或历史对话猜。
-2. 从下面的知识地图选择一个匹配的 `framework/<主题>/_index.md`。
-3. 从 [仓库列表](repos/_index.md) 找当前仓库；存在时读取 `repos/<仓库>/_index.md` 和它链接的 `rules.md`。
-4. 只有问题明确属于共享源码模块时才进入 `components/<模块>/`，只属于某个模型时才进入 `models/<模型>/`。
+2. 从下面的知识地图选择一个匹配的 `framework/<主题>/_index.md`，只读取当前任务需要的通用方法。
+3. 从 [仓库列表](repos/_index.md) 找当前仓库。只要仓库已经登记，就必须读取 `repos/<仓库>/_index.md`、它链接的 `rules.md`，以及与当前任务同名的仓库主题入口；不能读完 `framework/` 就直接开始查源码。
+4. 仓库主题入口负责继续路由。涉及源码时先看 `components/_index.md` 的职责地图，只属于某个模型时看 `models/_index.md`；确认 owner 后读取对应 `_index.md` 和其中已有的 `rules.md`。找不到 owner 时以 live 源码继续调查，复盘确认稳定边界后再补路由，不要为一次问题临时造模块。
 5. 当前机器地址、路径、账号、cache、venv 和临时状态只从 ignored `local/` 获取，并用 live 命令重新验证。
-6. 不要递归加载整棵知识树；历史错题只在出现相似错误或用户明确调查历史时搜索。
+6. 不要递归加载整棵知识树；历史错题不是默认入口，只在规则明确提示、出现高度相似错误或用户明确调查历史时搜索。
 
 ## 1. 知识地图：先通用，再仓库，最后代码或模型
 
-| 正在做什么 | 第一个入口 | 仓库有特殊规则时再看 |
+| 正在做什么 | 第一个入口 | 识别仓库后必须检查 |
 |---|---|---|
 | code review、边界和公开接口 | [framework/review](framework/review/_index.md) | `repos/<仓库>/review/_index.md` |
 | 测试选择和 CI | [framework/ci](framework/ci/_index.md) | `repos/<仓库>/ci/_index.md` |
@@ -26,7 +26,7 @@
 | 多 agent 分工和交接 | [framework/agents](framework/agents/_index.md) | 通常没有仓库补充 |
 | 拆需求、产品闭环和执行计划 | [framework/planning](framework/planning/_index.md) | 仓库入口中对应的业务主题 |
 
-仓库补充目录不一定全部存在，不要预先建立空目录。问题同时影响多个位置时只保留一篇正文，其他入口链接过去。
+仓库补充目录不一定全部存在，不要预先建立空目录。存在同名仓库主题时必须进入；不存在时以仓库 `rules.md` 的现象路由为准。问题同时影响多个位置时只保留一份规则正文，其他入口链接过去。
 
 ## 2. 通用 P0 硬停
 
@@ -51,17 +51,19 @@
 | SSH、容器、远端服务或长跑 | [远端入口](framework/remote/_index.md) | 先验证目标、环境、超时、状态文件和清理边界 |
 | 多 agent 或并行工作 | [agent loop](framework/agents/guides/agent-loop-workflow.md) | 只拆能独立验证的任务，主 agent 复核结论 |
 | 产品规划或 roadmap | [产品闭环](framework/planning/guides/product-loop-planning.md) | 先写用户可感知的完整闭环，再拆技术任务 |
+| 复盘、沉淀经验或总结教训 | [复盘到规则](framework/debug/guides/retrospective-to-rules.md) | 默认更新最近 owner 的规则；只有复杂证据值得长期保留时才新增错题 |
 
 仓库入口链接的 `rules.md` 可以增加更严格的门禁，但不能放宽这里的通用 P0。
 
 ## 4. 知识写到哪里
 
-- 换到无关仓库仍然成立的方法 → `framework/<主题>/`。
-- 依赖某仓库代码、命令、CI、PR 或流程的经验 → `repos/<仓库>/<主题>/`。
-- 多处复用的源码模块事实 → `repos/<仓库>/components/<模块>/`。
-- 模型专有实现、配置和 checkpoint 语义 → `repos/<仓库>/models/<模型>/`。
-- 具体错误 → 最近归属目录的 `incidents/`。
+- 能反复避免问题、改变下一次行为的结论 → 最近 owner 的 `rules.md`。跨仓库规则放 `framework/<主题>/`，仓库规则放 `repos/<仓库>/`，模块或模型规则继续下沉到对应目录。
+- 稳定的数据流、职责和边界 → 最近 owner 的 `architecture.md`。
+- 需要展开说明但不是硬门禁的方法 → 对应主题的 `guides/`。
+- `incidents/` 只保存规则无法承载的复杂复现、证据链或历史背景；它可有可无，不能成为正常开工必须猜路径才能找到的知识入口。
 - 当前机器事实 → ignored `local/`。
+
+用户要求“复盘”时，必须回答为什么发生、为什么原有规则或测试没有发现、怎样提前阻止，并把可执行结论写进最近 owner 的 `rules.md`。只有事故过程本身仍有独立查询价值时，才同时保留一篇 incident 并从规则链接过去。
 
 长期知识禁止写入系统、全局或个人 memory 位置。新增、移动、拆分或删除 Markdown 前读 [CONTRIBUTING.md](CONTRIBUTING.md)，同步最近的 `_index.md`，然后运行：
 

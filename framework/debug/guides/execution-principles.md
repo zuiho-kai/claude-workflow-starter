@@ -29,7 +29,7 @@
 
 ## 4. 仓库知识写回仓库
 
-可复用方法写 `framework/`，仓库、模块和模型经验写 `repos/`，具体失败写最近的 `incidents/`，当前机器事实写 ignored `local/`。不要默认写系统、全局或个人 memory。
+能改变下一次行为的结论先写最近 owner 的 `rules.md`；稳定职责写 `architecture.md`；需要展开的方法写 `guides/`。只有复杂证据或历史过程有独立查询价值时才写 `incidents/`，当前机器事实写 ignored `local/`。不要默认写系统、全局或个人 memory。
 
 写入前查重复，更新最近的 `_index.md`，并运行知识树检查。
 

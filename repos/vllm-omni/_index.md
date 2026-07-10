@@ -20,7 +20,7 @@
 | 审查模型适配和仓库专有改动 | [review](review/_index.md) | vLLM-Omni 审查规则 |
 | 查看 CI 规则和测试配置 | [ci](ci/_index.md) | vLLM-Omni CI |
 | 查看文档和 RFC 状态 | [docs](docs/_index.md) | 仓库文档入口 |
-| 调查对齐、尺寸或风格问题 | [debug](debug/_index.md) | 仓库专有调试方法 |
+| 调查仓库专有 bug、crash 或行为异常 | [debug](debug/_index.md) | 完成通用调试后的仓库二次路由 |
 | 查看配置和开发入口 | [dev](dev/_index.md) | 开发和配置说明 |
 | 处理分支、PR 和公开证据 | [git](git/_index.md) | 仓库专有 Git/PR 规则 |
 | 跑 benchmark、profiling 或查历史结果 | [benchmark](benchmark/_index.md) | 性能入口 |

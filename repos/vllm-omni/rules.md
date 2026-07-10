@@ -7,8 +7,9 @@
 1. 确认真实 vLLM-Omni checkout、分支和目标 worktree。主基准 checkout 默认只读，业务修改使用专用 worktree。
 2. 写代码前读 [code taste](../../framework/review/guides/code-taste.md)。
 3. 新模型、新 pipeline、新 public entrypoint 或性能 claim 先读 [mini spec](../../framework/planning/guides/mini-spec.md)；涉及模型或 checkpoint 再读 [model adaptation guardrails](review/guides/model-adaptation-guardrails.md)。
-4. benchmark、profiling、GPU、serving 或远端验证先读 [benchmark 入口](benchmark/_index.md)、[远端入口](remote/_index.md) 和最近的相关错题。
-5. 当前机器地址、worktree、venv、cache、容器和账号只从 ignored `local/` 获取，并用本轮 live 命令验证。
+4. bug、crash 或行为异常在读完通用 debug 后必须进入 [vLLM-Omni 调试入口](debug/_index.md)，再通过仓库主题、`components/_index.md` 或 `models/_index.md` 确认 owner；不能停在通用规则，也不能先猜 incident 路径。
+5. benchmark、profiling、GPU、serving 或远端验证先读 [benchmark 入口](benchmark/_index.md) 和 [远端入口](remote/_index.md)。只有规则明确提示、出现高度相似错误或用户要求历史复盘时才查错题。
+6. 当前机器地址、worktree、venv、cache、容器和账号只从 ignored `local/` 获取，并用本轮 live 命令验证。
 
 ## 2. 场景触发器
 
@@ -25,6 +26,9 @@
 
 - Algorithm 决策前先查 upstream 主入口，包括 `modeling_*`、`generation_*`、tokenizer、scheduler、denoising loop、special token、attention mask 和 KV 路径。
 - Crash 或 `AttributeError` 不是停止点；必须追到错误类型为什么进入当前路径。
+- 仓库专有 bug 必须完成第二次路由：从 [debug 入口](debug/_index.md) 进入仓库主题，再通过 [组件职责地图](components/_index.md) 或 [模型列表](models/_index.md) 找真实 owner。owner 已有 `rules.md` 时必须读取；没有时以 live 源码为准，复盘确认规则具有复用价值后再补，不为单次 issue 预建目录。
+- 配置或启动问题必须沿公开入口展开到每个 stage 的最终有效配置，再核对 runtime 拓扑和 worker 输入；不能用用户意图、单层 YAML 或最后一条日志代替合并后的真实值。
+- 配置、拓扑和 contract 校验必须在进入底层 worker 前明确失败。best-effort 的锁、清理、日志或观测逻辑只能吞自己能够处理的异常，不能吞上游校验错误。
 - 新模型的 `0 missing / 0 unexpected`、shape smoke、无 NaN/Inf 和 mock 权重只证明 plumbing；必须补 semantic parity matrix。
 - L2 只覆盖 CPU/mock 功能且不能触发真实 stage、device 或 GPU 初始化；真实权重、精度、性能和 profiling 属于 L4。
 - 新参数必须有单一 owner、公开 contract 和对应测试；禁止用 `dict.get(...) or fallback`、`hasattr`、随手 `getattr(default)` 或 `generator=None` 掩盖新旧路径不一致。
