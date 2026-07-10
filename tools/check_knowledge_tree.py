@@ -25,6 +25,26 @@ REMOTE_USER_PATH = re.compile(
     r"/(?:home/(?!models(?:/|\b)|<)|data/(?!models?(?:/|\b)|<))"
     r"[A-Za-z0-9_-]+"
 )
+DANGEROUS_TEXT_PATTERNS = (
+    (
+        re.compile(r"StrictHostKeyChecking\s*=\s*no", re.IGNORECASE),
+        "关闭 SSH host key 校验",
+    ),
+    (
+        re.compile(r"safe\.directory\s+['\"]?\*", re.IGNORECASE),
+        "全局放行 Git safe.directory",
+    ),
+    (re.compile(r"--gpus\s+all\b", re.IGNORECASE), "让容器绕过调度器暴露全部 GPU"),
+    (re.compile(r"偷(?:空闲)?卡|偷空闲 GPU", re.IGNORECASE), "使用未分配 GPU"),
+)
+DANGEROUS_CODE_PATTERNS = (
+    (re.compile(r"\bpkill\b", re.IGNORECASE), "按进程名全局终止"),
+    (re.compile(r"\brm\s+-[^\n]*r[^\n]*f", re.IGNORECASE), "递归强制删除"),
+    (
+        re.compile(r"\bfind\b[^\n]*-exec[^\n]*\brm\b", re.IGNORECASE),
+        "find 批量递归删除",
+    ),
+)
 
 
 errors: list[str] = []
@@ -63,6 +83,27 @@ def markdown_links(path: Path) -> list[str]:
             continue
         links.extend(match.group(1).strip() for match in MARKDOWN_LINK.finditer(line))
     return links
+
+
+def fenced_code_lines(path: Path) -> list[tuple[int, str]]:
+    """返回 Markdown fenced code block 中的可执行文本。"""
+    code_lines: list[tuple[int, str]] = []
+    in_fence = False
+    fence_marker = ""
+    for line_number, line in enumerate(read_text(path).splitlines(), 1):
+        stripped = line.lstrip()
+        if stripped.startswith(("```", "~~~")):
+            marker = stripped[:3]
+            if not in_fence:
+                in_fence = True
+                fence_marker = marker
+            elif marker == fence_marker:
+                in_fence = False
+                fence_marker = ""
+            continue
+        if in_fence:
+            code_lines.append((line_number, line))
+    return code_lines
 
 
 def local_target(raw_target: str) -> str | None:
@@ -127,6 +168,20 @@ def check_sensitive_text(path: Path) -> None:
         errors.append(f"页面包含私钥内容：{display(path)}")
 
 
+def check_dangerous_commands(path: Path) -> None:
+    text = read_text(path)
+    for pattern, description in DANGEROUS_TEXT_PATTERNS:
+        if pattern.search(text):
+            errors.append(f"页面包含危险操作（{description}）：{display(path)}")
+    for line_number, line in fenced_code_lines(path):
+        for pattern, description in DANGEROUS_CODE_PATTERNS:
+            if pattern.search(line):
+                errors.append(
+                    f"代码块包含危险操作（{description}）："
+                    f"{display(path)}:{line_number}"
+                )
+
+
 def check_incident(path: Path) -> None:
     if not INCIDENT_NAME.match(path.name):
         errors.append(f"错题文件名不符合 YYYY-MM-DD-short-name.md：{display(path)}")
@@ -171,6 +226,7 @@ def check_directory(directory: Path) -> None:
         check_links(page)
         check_file_size(page, index_text)
         check_sensitive_text(page)
+        check_dangerous_commands(page)
         if page.name != INDEX_NAME and page.name not in index_text:
             errors.append(f"页面没有登记到当前目录索引：{display(page)}")
         if directory.name == "incidents" and page.name != INDEX_NAME:

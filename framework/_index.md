@@ -24,5 +24,3 @@
 | SSH、容器和远端长跑任务 | [remote](remote/_index.md) | 通用远端操作方法 |
 | 判断何时使用多个 agent | [agents](agents/_index.md) | agent 分工和交接 |
 | 拆需求、产品闭环和执行计划 | [planning](planning/_index.md) | 通用规划方法 |
-
-当前处于迁移第一阶段：新入口已经建立，正文仍可能链接旧目录；旧正文会按主题逐步迁移，不在本阶段复制。

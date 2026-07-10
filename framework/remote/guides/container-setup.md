@@ -35,8 +35,8 @@ export TORCH_HOME=/home/<YOUR_GROUP>/<YOUR_USERNAME>/.cache/torch
 # 4. 持久 HF datasets
 export HF_DATASETS_CACHE=/home/models/hub
 
-# 5. Git 共享目录放行（容器 root vs 宿主 UID 差异）
-git config --global --add safe.directory "*"
+# 5. 仅放行已经验证归属的当前仓库
+git config --global --add safe.directory "$(pwd -P)"
 ```
 
 ### 判断标准（每次下东西前问自己）

@@ -76,7 +76,7 @@ transformers 版本换了 3 次，attn_implementation 换了 2 次，patch 了 4
 
 `from_pretrained(..., trust_remote_code=True)` 每次启动都从 snapshot 重新复制到 `$HF_HOME/modules/transformers_modules/<hash>/`，覆盖对 cache dir 的任何手动 patch。
 **Why:** transformers 的 `dynamic_module_utils` 每次调用都做 hash 校验并重建 cache。
-**How to apply:** 改 snapshot 文件（`hub/models--xxx/snapshots/<hash>/模型文件.py`），不要改 `modules/transformers_modules/` 下的文件；patch 完后 `rm -rf modules/transformers_modules/<hash>/` 强制重建。
+**How to apply:** 改本轮自己维护的 snapshot overlay，不直接修改共享 cache。需要重建动态模块时，先解析并验证精确 hash 目录属于本轮，再将该单一目录移动到 quarantine；禁止对共享 cache 使用递归删除或通配符。
 
 ### 2.7 有 runbook 就直接用 runbook 的版本，任何"先试别的"都是浪费
 

@@ -15,7 +15,7 @@
 **侦察三连**：
 ```bash
 docker ps && docker inspect <container> --format '{{range .Mounts}}...'
-find /home /scratch -maxdepth 5 -name "snapshots" -type d 2>/dev/null
+find <AUTHORIZED_MOUNT_ROOT> -maxdepth 5 -name "snapshots" -type d 2>/dev/null
 env | grep -iE "cache|hf_home"
 ```
 **提醒**：建容器挂 `/home`，`HF_HOME` 指向持久路径

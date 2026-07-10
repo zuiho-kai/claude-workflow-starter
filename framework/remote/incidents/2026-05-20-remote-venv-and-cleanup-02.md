@@ -51,7 +51,7 @@ tail -80 /tmp/repro3743_install.log
 
 **追加事故：清理远端目录时把“要保留的 venv”放进删除列表**
 
-**症状**：用户说“清理多余的……只保留你 venv”，意思是保留刚建的 `<REMOTE_WORK_ROOT>/vllm0.21.0`，删除旧的 0.20.0 venv 和 `after.log`、`graph_baseline.log`、`pr3638_bench`、`t2i_fp8.log`、`baseline.log`、`it2i_fp8.log`、`profile_ar.py` 等无用文件。我却先按自己错误理解写了 cleanup 脚本，把 `<REMOTE_WORK_ROOT>/vllm0.21.0` 和 `<REMOTE_WORK_ROOT>/.uv-cache` 也放进 rm 列表；用户中断后，远端仍有 `rm -rf -- <REMOTE_WORK_ROOT>/vllm0.21.0` 在跑，造成刚下载的 venv 被半删/需重建。
+**症状**：用户要求保留刚建的 venv、清理其他点名文件，我却把保护对象也加入递归删除列表。用户中断后，旧清理进程仍在运行，造成 venv 被半删并需要重建。
 
 **根因**：
 - 没有先把用户语义拆成两张白名单：`KEEP` 和 `DELETE`。听到“清理”就按自己假设删，违反 P2。
@@ -60,7 +60,7 @@ tail -80 /tmp/repro3743_install.log
 
 **硬规则**：
 1. 远端清理必须先写两行计划并自检：`KEEP=(...)`、`DELETE=(...)`。`KEEP` 和 `DELETE` 求交集非空时直接 abort。
-2. 用户说“只保留 X”时，`X` 是最高优先级保护对象；任何 `rm -rf` 脚本里出现 `X` 都是 P0 错误。
+2. 用户说“只保留 X”时，`X` 是最高优先级保护对象；任何递归删除计划包含 `X` 都是 P0 错误。
 3. 删除范围默认只包含用户点名的路径；不要顺手删 cache、脚本、venv、worktree，除非用户明确点名或确认。
 4. 大目录删除前先 `ps` 确认没有旧 cleanup 在跑；中断过的清理任务必须先 kill 旧 `rm` / cleanup，再做下一步。
 5. 不要用“我来清理无用产物”扩展成“清空整个目录”。用户说清空时才清空；用户说保留 venv 时，先保护 venv。
@@ -93,10 +93,10 @@ PY
 
 **追加事故：长时间删除卡住却没有进度感知**
 
-**症状**：用户要求清空 `<REMOTE_WORK_ROOT>` 后重建小 venv。我执行 `find <REMOTE_WORK_ROOT> -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +`，远端 CPFS 对大量旧 venv / worktree 文件返回多条 `Stale file handle` 和一个 `Device or resource busy`。命令跑了数分钟才失败/被用户追问“怎么那么慢，是不是卡了”，我没有在 30 秒内主动判断“删除阶段卡住”。
+**症状**：用户要求清理已确认的工作根后重建小 venv。我对目录执行了宽泛递归删除，远端 CPFS 对大量旧文件返回 `Stale file handle` 和 `Device or resource busy`。命令运行数分钟后失败，而我没有在 30 秒内主动判断删除阶段卡住。
 
 **根因**：
-- 把 `rm -rf` 当成一定会快速结束的原子步骤，没有给长删除设置进度观测和超时切换策略。
+- 把递归删除当成一定会快速结束的原子步骤，没有给长删除设置进度观测和超时切换策略。
 - CPFS / 网络文件系统上的大目录删除很容易被 stale handle / busy file 卡住，不能用本地 ext4 的直觉。
 - 任务目标是“让 `<REMOTE_WORK_ROOT>` 变干净并重建 venv”，不一定要求同步物理删除旧内容；我没及时切换到 `mv <REMOTE_WORK_ROOT> <REMOTE_WORK_ROOT>.trash-<ts> && mkdir <REMOTE_WORK_ROOT>` 的快路径。
 
@@ -107,7 +107,7 @@ PY
    mkdir -p <REMOTE_WORK_ROOT>
    ```
    先交付干净目标目录，再后台慢删 trash。
-2. 如果必须 `rm -rf`，必须用可感知方式跑：后台启动、5 秒看日志、30 秒仍无进度或出现 `Stale file handle` / `Device or resource busy` 立刻停止并切换 rename。
+2. 如果确实需要物理删除，必须逐个使用已确认的绝对路径，并持续观察进度；30 秒仍无进度或出现 `Stale file handle` / `Device or resource busy` 时立即停止并报告。
 3. 看到 `Stale file handle` 不是“再等等”的信号，而是网络文件系统元数据状态坏了；继续等通常只会浪费时间。
 4. 用户问“是不是卡了”之前，我应该主动汇报：当前卡在删除阶段，错误是 stale/busy，改用 rename 快路径。
 

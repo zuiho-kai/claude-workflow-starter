@@ -16,6 +16,7 @@
 
 | 遇到什么 | 查看哪里 | 说明 |
 |---|---|---|
+| 开始任何 vLLM-Omni 修改、测试、远端或发布任务 | [硬门禁](rules.md) | 仅适用于 vLLM-Omni 的仓库规则 |
 | 审查模型适配和仓库专有改动 | [review](review/_index.md) | vLLM-Omni 审查规则 |
 | 查看 CI 规则和测试配置 | [ci](ci/_index.md) | vLLM-Omni CI |
 | 查看文档和 RFC 状态 | [docs](docs/_index.md) | 仓库文档入口 |

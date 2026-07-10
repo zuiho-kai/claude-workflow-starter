@@ -63,8 +63,8 @@ docker exec -it wzr_omni bash
 # 进容器后：
 source /app/vllm-omni/.venv/bin/activate
 export HF_HOME=/home/models
-git config --global --add safe.directory "*"
-cd <REMOTE_WORK_ROOT>/fq9hpsacuser03/sources/vllm-omni
+cd <REMOTE_WORK_ROOT>/sources/vllm-omni
+git config --global --add safe.directory "$(pwd -P)"
 
 # 跑 pytest
 pytest -s -vv tests/e2e/accuracy/test_gebench_hunyuanimage3_h100_smoke.py \

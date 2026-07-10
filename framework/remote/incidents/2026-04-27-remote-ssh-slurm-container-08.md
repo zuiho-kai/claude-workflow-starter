@@ -1,12 +1,13 @@
-# 2026-04-27 — sinfo 查空闲 GPU 方法
+# 2026-04-27 — 不能用 CPU 空闲数推算可用 GPU
 
 - 编号：`inc-2026-04-27-remote-ssh-slurm-container-08`
 - 归属：`framework/remote`
 - 状态：已验证
-- 搜索词：sinfo 查空闲 GPU 方法
+- 搜索词：sinfo、GPU allocation、CPU 空闲数、Slurm
 - 影响范围：framework/remote
 
-**用法**：`sinfo -p <partition> --noheader -o "%n %G %C %t"`
-**输出格式**：`%C` = `已分配/空闲/其他/总CPU`，每卡 28 CPU（H800 节点）
-**换算**：空闲 GPU = 空闲 CPU ÷ 28
-**提醒**：`mixed` 状态 = 部分卡被占；`drain` = 节点下线不可用；不需要申请 allocation 就能看
+**症状**：曾尝试根据 `sinfo` 的 CPU 空闲数和某台机器的 CPU/GPU 比例推算“可用 GPU”。
+
+**根因**：CPU、GPU、GRES 和调度策略不是固定比例；节点显示 mixed 或设备显存为空，也不代表当前用户获得了 GPU 使用权。
+
+**解法**：`sinfo` 只用于了解节点和分区状态。实际可用 GPU 以调度器授予的 allocation、job 信息和 `CUDA_VISIBLE_DEVICES` 为准；需要更多资源时重新申请，不使用 allocation 外设备。

@@ -57,7 +57,7 @@ allowed-tools:
 2. 如果新建了子目录，更新上一层 `_index.md`。
 3. 修复所有相对链接。
 4. 运行 `python tools/check_knowledge_tree.py`。
-5. 同一类错误反复发生且需要每次开工拦截时，再建议升级到 `CLAUDE.md`。
+5. 同一类错误反复发生且需要每次开工拦截时：跨仓库都成立才建议升级到根 `CLAUDE.md`；只属于一个仓库则写入并链接 `repos/<仓库>/rules.md`。
 
 ## 不要
 

@@ -97,11 +97,11 @@ cleanup() {
 trap cleanup EXIT
 ```
 
-不要 `pkill -f vllm`，不要 kill 其他用户进程。清理后 GPU 还没回到空闲，再查本次 PGID/child PID；无法证明是自己的进程就停下报告。
+不要按进程名全局终止服务，也不要处理其他用户进程。清理后资源仍未释放时，只检查本次记录的 PGID/child PID；无法证明归属就停下报告。
 
 ### pytest / accuracy cleanup 也必须限定本轮归属
 
-远端 pytest、accuracy test、profiling wrapper 不一定是 long-running server，但 cleanup 规则一样严格。凡是测试 helper 里出现按进程名扫描（例如 `vllm` / `vllm_omni` / `StageEngineCoreProc`）或全局 `pkill`，共享节点开跑前必须先改成下列任一限定：
+远端 pytest、accuracy test、profiling wrapper 不一定是 long-running server，但 cleanup 规则一样严格。凡是测试 helper 按进程名扫描整个节点，共享节点开跑前必须先改成下列任一限定：
 
 ```bash
 # 优先：只杀本次 runner 的进程组
@@ -118,7 +118,7 @@ done
 
 **禁止模式**：
 
-- `pkill -f vllm` / `pkill -f StageEngineCoreProc`。
+- 按服务或进程名称全局终止。
 - 先跑完整测试，等 cleanup 误杀后再解释。
 - 只看 GPU UUID / 显存，不查 `/proc/<pid>/cwd` 或 PGID 就 kill。
 

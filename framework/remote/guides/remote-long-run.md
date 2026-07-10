@@ -34,7 +34,7 @@ worker/backend log:       actual backend/operator selected
 设备和 cleanup 也是长测前置条件，不是失败后再补：
 
 - 非连续 `CUDA_VISIBLE_DEVICES` 必须显式写 stage devices，并打印 `stage -> physical GPUs`。不能假设框架会按自己理解 remap。
-- pytest / benchmark cleanup 里如果有全局 `pkill`、扫 `vllm`、按进程名 kill，必须先改成本轮 PGID 或 `/proc/<pid>/cwd` 属于本次 worktree 的进程；共享节点上不能靠“跑完再看”。
+- pytest / benchmark cleanup 如果按进程名扫描整个节点，必须先改成本轮已记录且验证归属的 PID/PGID；共享节点上不能靠“跑完再看”。
 - 10 分钟没有出现 scope lock 里的关键证据，先汇报卡点；20 分钟仍在改脚本，停下复盘，不继续试下一版。
 
 **一句话规则**：配置验证类长测的第一交付物是“字段确实进了真实消费点”，不是完整指标表。生效链路不闭合时，继续长跑只是在烧 GPU。

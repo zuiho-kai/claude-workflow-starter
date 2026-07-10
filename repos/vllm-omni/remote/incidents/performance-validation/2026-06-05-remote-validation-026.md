@@ -69,7 +69,7 @@ profiler dir: empty
    ```bash
    tmux kill-session -t <session>
    kill -TERM -<pgid>; sleep 5; kill -KILL -<pgid>
-   rm -rf /tmp/<this-run-prefix>*
+   # 逐个列出并验证本轮记录的绝对路径，再移动到本轮 quarantine；禁止通配符递归删除
    rm -f /tmp/<this-run-script> /tmp/<this-run-input>
    # 只删除本轮明确触发/确认归属的 cache 子目录，禁止扫大 cache
    nvidia-smi

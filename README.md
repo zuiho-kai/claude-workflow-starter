@@ -11,12 +11,44 @@ cd claude-workflow-starter
 
 如果还需要项目代码，可以把目标仓库克隆到旁边或按自己的 worktree 规则管理。知识仓库用 `repos/<仓库>/` 表示经验归属，不要求把项目代码塞进这个目录。
 
+## 在其他仓库接入
+
+推荐把框架入口放到目标仓库根目录，这样 agent 会自动发现 `AGENTS.md`，人类也能从 README 进入。如果只把本项目放在目标仓库旁边，目标仓库自己的 `AGENTS.md` 必须显式要求读取这个知识仓库；否则两边不会自动关联。
+
+最短接入流程：
+
+1. 把 `AGENTS.md`、`CLAUDE.md`、`README.md`、`CONTRIBUTING.md`、`framework/` 和 `tools/check_knowledge_tree.py` 复制或合并到目标仓库根目录。已有同名规则时先合并，不要直接覆盖。
+2. 在目标仓库的 `.gitignore` 中加入 `local/`；机器地址、账号、cache 和 venv 只写 `local/`。
+3. 新建 `repos/_index.md` 和 `repos/<你的仓库>/_index.md`。如果 fork 了本仓，删除与你无关的 `repos/vllm-omni/`、`repos/jianghan-roleplay-data-pipeline/`，并同步 `repos/_index.md`。
+4. 只有该仓库确实有每次开工都必须执行的专属门禁时，才新建 `repos/<你的仓库>/rules.md`，并从仓库 `_index.md` 链接它。
+5. 按实际需要增加主题、`components/<模块>/`、`models/<模型>/` 和 `incidents/`；不要预建空目录。
+6. 运行 `python tools/check_knowledge_tree.py`，确认索引、链接和目录结构完整。
+
+根 `AGENTS.md` 和 `CLAUDE.md` 必须保持仓库中性。模型、GPU、工作目录、Git 身份、专用 remote 和 PR 格式等规则只能放到对应 `repos/<仓库>/` 或 ignored `local/`，不能重新堆回根入口。
+
 ## 从哪里查
 
 - [通用经验](framework/_index.md)：review、CI、docs、Git、debug、benchmark、环境、远端、agent 和规划。
 - [仓库经验](repos/_index.md)：当前登记了 vLLM-Omni 和 Jianghan。
 - [HunyuanImage3](repos/vllm-omni/models/hunyuan-image3/_index.md)：模型架构、HF 对齐、历史分析和错题。
 - [贡献与目录维护](CONTRIBUTING.md)：内容放哪里、错题怎么写、什么时候拆分、怎样更新索引。
+
+### 按任务找入口
+
+| 你正在做什么 | 先看通用入口 | 当前仓库有特殊规则时再看 |
+|---|---|---|
+| code review、边界和公开接口 | [review](framework/review/_index.md) | `repos/<仓库>/review/` |
+| 测试和 CI | [ci](framework/ci/_index.md) | `repos/<仓库>/ci/` |
+| 文档、RFC 和公开说明 | [docs](framework/docs/_index.md) | `repos/<仓库>/docs/` |
+| Git、commit、rebase 和 PR | [git](framework/git/_index.md) | `repos/<仓库>/git/` |
+| 调试和根因收敛 | [debug](framework/debug/_index.md) | `repos/<仓库>/debug/` |
+| benchmark 和性能证据 | [benchmark](framework/benchmark/_index.md) | `repos/<仓库>/benchmark/` |
+| Windows、WSL 和本地环境 | [environment](framework/environment/_index.md) | 通常不需要仓库补充 |
+| SSH、容器、GPU 和远端任务 | [remote](framework/remote/_index.md) | `repos/<仓库>/remote/` |
+| 多 agent 分工 | [agents](framework/agents/_index.md) | 通常不需要仓库补充 |
+| 需求拆分和执行计划 | [planning](framework/planning/_index.md) | 仓库入口中的业务主题 |
+
+固定顺序是“通用主题 → 当前仓库 → 代码模块或模型”。先从上表选择通用主题，再从 [仓库列表](repos/_index.md) 找到当前仓库；只有问题明确属于共享源码模块或某个模型时，才继续进入 `components/` 或 `models/`。
 
 不知道归属时，可以先全文搜索：
 
@@ -59,6 +91,8 @@ local/                                    # 当前机器信息，Git 忽略
 - 多模型共享代码错误 → `repos/<仓库>/components/<模块>/incidents/`
 - 模型专有错误 → `repos/<仓库>/models/<模型>/incidents/`
 
+按已经验证的根因归属，不按用户最先看到现象的位置归属。例如前端看到 API 404，不等于根因一定在 frontend；根因未明时先放仓库对应工作主题的 `incidents/`，状态写“待归类”，查清后再移动。
+
 文件名使用 `YYYY-MM-DD-short-name.md`，正文按 [错题页面格式](CONTRIBUTING.md#正文模板) 编写。一件事故只保留一篇完整正文，其他目录用链接指过去。
 
 ## 内容多了怎样拆
@@ -68,7 +102,7 @@ local/                                    # 当前机器信息，Git 忽略
 - 一个目录直接放到第 8 个普通页面：按 `guides/`、`incidents/` 或明确业务主题分类。
 - 一个分类目录超过 20 篇当前有效页面：继续按稳定问题主题分类。
 
-工具只提醒、生成模板和修复确定无歧义的链接，不会静默决定语义归属或后台移动文件。
+检查工具只报告可以机械判断的问题，不会生成目录、静默决定语义归属或在后台移动文件。
 
 ## 当前机器信息
 

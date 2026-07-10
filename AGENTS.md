@@ -1,13 +1,14 @@
 # Agent Instructions
 
-Before doing any work in this repository, read `CLAUDE.md` and follow it as the source of truth.
+Before doing any work, read `CLAUDE.md`. It is the repository-neutral routing and safety entrypoint.
 
-For git commits and PR branch pushes, re-read the git-related rules in `CLAUDE.md` first. Commits must include DCO sign-off.
+Then follow one routing order:
 
-When pushing updates to PR branches owned by `TaffyOfficial`, use the Taffy SSH identity:
+- Choose the matching general topic from the map in `CLAUDE.md` and read its `framework/<topic>/_index.md`.
+- Identify the repository that actually owns the task from `repos/_index.md`.
+- If that repository is registered, read its `_index.md` and any linked `rules.md` before changing code, running remote jobs, benchmarking, committing, or pushing.
+- Never apply one repository's rules, machine paths, credentials, remotes, or model assumptions to another repository.
 
-```bash
-git push git@github-taffy:TaffyOfficial/<repo>.git HEAD:<branch>
-```
+Before adding or moving knowledge, read `CONTRIBUTING.md`, update the nearest `_index.md`, and run `python tools/check_knowledge_tree.py`.
 
-The `github-taffy` SSH host is configured in `~/.ssh/config` with `IdentityFile ~/.ssh/id_taffy`. Do not use the default HTTPS GitHub identity for Taffy-owned PR branches.
+Before committing or pushing, follow the target repository's own Git and identity rules. Do not inherit a commit identity, SSH host, remote, DCO requirement, or PR format from an unrelated repository entry.

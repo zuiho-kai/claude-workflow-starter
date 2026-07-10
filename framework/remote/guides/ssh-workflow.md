@@ -1,88 +1,38 @@
-## 1. 首选：Windows OpenSSH + key auth + retry
+# SSH 工作方式
+
+## 1. 先验证目标和 host key
+
+连接信息以完整 `user@host:port` 为单位记录在 ignored `local/remote.md`。首次连接前从管理员、云控制台或其他可信通道核对 host key fingerprint；不要为了省事关闭 host key 校验。
+
+优先使用：
+
+- OpenSSH key + `ssh-agent`；
+- 组织提供的证书或 SSO；
+- 已配置的 `Host` alias 和固定 `IdentityFile`。
+
+密码只通过交互式 SSH 或组织批准的凭据工具输入，不写进脚本、环境文件、命令历史或仓库。
+
+## 2. 最小只读探针
 
 ```bash
-WIN_SSH=/c/Windows/System32/OpenSSH/ssh.exe
-ssh_retry() {
-  for i in 1 2 3 4 5; do
-    out=$($WIN_SSH -o ControlMaster=no -o ConnectTimeout=10 vllm-server "$1" 2>&1)
-    [[ "$out" != *"Connection closed"* && "$out" != *"kex_exchange"* ]] && echo "$out" && return 0
-    sleep 3
-  done
-  return 1
-}
+ssh -o BatchMode=yes -o ConnectTimeout=10 <host-alias> \
+  'hostname && id && pwd -P'
 ```
 
-**Why:**
-- Git Bash 的 `/usr/bin/ssh` + ASKPASS 密码失败连续 N 次会触发服务器 fail2ban → IP 被封
-- Windows / WSL ControlMaster 不可用（Unix socket / VPN 兼容问题）
-- WSL2 NAT 无法访问内网段
+`<host-alias>` 必须来自已验证的本机 SSH 配置。探针失败时先区分 DNS、路由、host key、认证和服务端拒绝，不连续暴力重试。
 
-**注意：**
-- SSH key 必须提前放服务器 `~/.ssh/authorized_keys`
-- 服务器 `MaxStartups` 限制并发，快速连多次会随机拒绝 → retry 间隔 ≥ 3s
-- SSH 超时后先 `sleep 60` 再试；连续 2 次失败等 5 分钟（避免短连接风暴 + fail2ban）
-- 每次 SSH 尽量打包多条命令，减少连接次数
+## 3. 减少连接风暴
 
-## 2. fallback：ASKPASS（仅当登录节点没放 key）
+- 每次连接合并少量相关只读检查；
+- 使用短超时；
+- 认证失败或服务端限流后暂停，确认原因再重试；
+- ControlMaster 只在当前平台和网络明确支持时使用；
+- 长任务使用远端状态文件和日志，不高频轮询。
 
-```bash
-ASKPASS_SCRIPT=$(mktemp)
-cat > "$ASKPASS_SCRIPT" << 'PWEOF'
-#!/bin/bash
-echo '<password>'
-PWEOF
-chmod 700 "$ASKPASS_SCRIPT"
+## 4. 文件传输
 
-SSH_ASKPASS="$ASKPASS_SCRIPT" SSH_ASKPASS_REQUIRE=force DISPLAY=:0 \
-  ssh -o StrictHostKeyChecking=no -o ConnectTimeout=15 \
-      <user>@<host> '<command>' < /dev/null
-```
+优先使用 `scp`、`sftp`、`rsync` 或仓库 Git 流程。传输后核对目标绝对路径、大小和 hash；不要用嵌套 shell/base64 命令绕过正常传输工具，除非环境明确限制且内容不敏感。
 
-`< /dev/null` 必须加，否则 SSH 会尝试读 stdin。
+## 5. Windows 注意事项
 
-## 3. KEX 错诊断：`Connection closed` ≠ auth 失败
-
-SSH 报 `kex_exchange_identification: Connection closed by remote host` 或 `Connection closed by remote host`（连接在 KEX 阶段被关，没到 auth）= **sshd 还没起完**，跟 auth/密码无关。
-
-`Permission denied`（含 `publickey,password`）才是 auth 失败，那时候才该考虑密码/key。
-
-**Why**：曾经新拉起 Aliyun 实例 <REMOTE_HOST>:31368，前 30s sshd 未就绪，连接被立刻关。我用 `BatchMode=yes` 试了 2 次 + sleep 15s 重试 1 次就报"连不上需要密码"，被用户骂"傻逼"。其实历史 `settings.local.json` 里这个 IP 从来没存过密码，本机 `~/.ssh/id_ed25519` 早就加载，等 sshd 起完直接 key-auth 通了。
-
-**How to apply**：
-- 看到 `kex_exchange_identification` / `Connection closed` 一律按"等"处理，**不要**问用户密码
-- 新拉起的实例（用户说"新拉起的" / "新启动" / "刚开" 都是信号）首次 ssh 给 **≥60s** 缓冲，至少 retry 5 次（间隔 ≥20s）再认输
-- 触发认输条件：5 次失败仍是 KEX 错 → 才 escalate（防火墙/端口错）；任何一次报 `Permission denied` → 立刻问 key/密码
-- 历史 settings.local.json 里能 grep 到的 IP 默认 key-auth 已设好，别假设要密码
-
-## 4. 操作容器：tmux send-keys（不要 SSH 直连容器）
-
-容器里没有 slurm 命令，不要试图 SSH 直连容器或在容器里跑 srun。正确方式是通过 tmux send-keys 发命令到已经在容器里的 tmux window。
-
-```bash
-# 发命令
-ssh ... 'tmux send-keys -t claude_test:0 "your command" Enter' < /dev/null
-
-# 等几秒后读输出
-ssh ... 'tmux capture-pane -t claude_test:0 -p -S -30' < /dev/null
-```
-
-**注意：**
-- 长命令注意引号嵌套，复杂的先写到远端文件再执行（见 `../feedback/remote_debug_strategy.md` docker exec 引号陷阱）
-- capture-pane 默认只抓当前可见区域，用 `-S -N` 抓更多历史行
-- tmux window 有前台进程时不能往该 window 发 shell 命令——`send-keys` 进了进程 stdin，从另一个 window 发
-
-## 5. Windows 投递远端脚本：先清 BOM/CRLF
-
-从 PowerShell 写脚本再 SSH 执行时，BOM 和 CRLF 会把 shell 脚本变成伪错误：`﻿set: command not found`、`/bin/bash^M`、路径里出现 `$'\r'`。这些不是业务逻辑问题，先修脚本编码。
-
-远端执行前固定跑：
-
-```bash
-SCRIPT=/tmp/run_xxx.sh
-perl -i -pe 's/^\x{FEFF}// if $.==1; s/\r$//' "$SCRIPT"
-wc -c "$SCRIPT"
-sed -n '1,40p' "$SCRIPT"
-bash -n "$SCRIPT"
-```
-
-如果 wrapper 会生成 nested script，nested script 也要在执行前过同一组 `perl` / `sed` / `bash -n`。不要只检查外层 wrapper 后就直接跑内层脚本。
+先确认实际调用的是 Windows OpenSSH、WSL SSH 还是 Git Bash SSH；三者的配置目录、agent 和网络路径可能不同。出现连接差异时记录 `Get-Command ssh` 或 `command -v ssh`，不要混用不同客户端的结论。

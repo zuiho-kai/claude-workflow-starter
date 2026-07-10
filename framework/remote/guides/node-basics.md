@@ -71,7 +71,7 @@ PY
 
 容器内是 root，但挂载的 Lustre 目录 owner 是 UID=2129 之类。会有两类问题：
 
-- **Git 报 dubious ownership**：`git config --global --add safe.directory "*"`
+- **Git 报 dubious ownership**：先验证仓库 owner 和绝对路径，只将当前已授权仓库加入 `safe.directory`；禁止使用通配符全局放行
 - **某些 Lustre 子目录 root 没权限读**：没办法，需要容器加 `--user 2129:1033`（但 cuda-12.9 image 可能没建 user，风险高）
 
 ### 反面教训
@@ -128,7 +128,7 @@ pip install <pkg>  # 如果 pip.conf 是清华
 
 ### 套路
 
-1. **建干净 worktree**：从那个 editable install 的目录 fetch upstream/main 后 `git worktree add /mnt/scratch/wt-<my-feature> upstream/main`——detached HEAD 在跟本地完全一致的 commit，不污染对方分支
+1. **建自己的干净 clone/worktree**：从任务 owner 的远端和自己有写权限的目录创建；他人的 editable install 只用于识别版本和依赖，不在其中 fetch、建 worktree 或修改文件
 2. **SCP 自己的改动文件**：改了哪几个就 scp 哪几个进新 worktree 的相同相对路径（不要整目录 sync，否则把对方未 push 的状态也带过去）
 3. **PYTHONPATH 前置**跑：
    ```bash
