@@ -6,9 +6,49 @@
 
 1. **侦察**：确认 worktree/head、venv/import、cache root、模型/config 文件和当前 endpoint 支持的 CLI 参数。
 2. **本地化试错**：调试阶段优先远端临时脚本 / one-liner，不用 commit-push-pull 当调试循环。
-3. **脚本化复杂命令**：PowerShell -> SSH -> bash 的复杂命令必须落脚本并检查 `wc -c`、前 40 行和 `bash -n`。
+3. **脚本化复杂命令**：PowerShell -> SSH -> bash 的复杂命令必须落脚本；Bash 脚本完整执行下面的 fail-closed 投递门禁，其他解释器使用自己的语法检查。
 4. **import gate**：新 venv、重装依赖、换节点或 benchmark 前，先验证 `torch/vllm/vllm_omni/transformers/flashinfer` import 和版本。
 5. **状态汇报**：远端 issue 复现只汇报 server/client 双日志和 server-side signature，不把“命令跑过”当复现成功。
+
+## 远端 Bash 脚本投递必须失败关闭
+
+Windows 或 PowerShell 产生的 Bash 脚本在远端执行前，必须同时过这四道门。Python、PowerShell 或其他解释器的脚本必须改用对应的语法/编译检查，不得套 `bash -n`。
+
+1. `test -s` 机器判定文件非空，`wc -c` 只记大小，`sed -n '1,40p'` 证明实际内容和目标一致。
+2. 检查并去除 UTF-8 BOM 和 CRLF；`bash -n` 抓不住所有 shebang/BOM 问题，不能单独当编码证据。
+3. `bash -n <script>` 必须通过。如果合同是直接执行 `./script`，还必须验证允许的 Bash shebang 和可执行权限；合同是 `bash script` 时不伪造 shebang 要求。
+4. 脚本要么使用 `set -euo pipefail`，要么显式捕获并验证每个阶段的返回码。两者都没有时，后面的命令成功不能让整个 preflight 变成 PASS。
+
+最小检查示例：
+
+```bash
+set -euo pipefail
+script=/tmp/run_x.sh
+test -s "$script"
+wc -c "$script"
+sed -n '1,40p' "$script"
+first3=$(od -An -tx1 -N3 "$script" | tr -d ' \n')
+if [ "$first3" = efbbbf ]; then
+  echo "UTF-8 BOM found in $script" >&2
+  exit 1
+fi
+if grep -n $'\r$' "$script"; then
+  echo "CRLF found in $script" >&2
+  exit 1
+fi
+bash -n "$script"
+
+# 后续直接执行脚本路径时，显式设 DIRECT_EXECUTE=1。
+if [ "${DIRECT_EXECUTE:-0}" = 1 ]; then
+  case "$(head -n 1 "$script")" in
+    '#!/bin/bash'|'#!/usr/bin/bash'|'#!/usr/bin/env bash') ;;
+    *) echo "unsupported Bash shebang in $script" >&2; exit 1 ;;
+  esac
+  test -x "$script"
+fi
+```
+
+任何验证或编码错误，以及直接执行合同下的 shebang/权限错误，都必须先修正再执行。使用 `bash <script>` 时 shebang 不参与解释器选择，但 BOM、CRLF、语法和错误处理门禁仍必须通过；脚本最后 exit 0 不能覆盖早先的门禁失败。
 
 ## 核心原则
 
@@ -52,7 +92,7 @@ python -c "from transformers import AutoTokenizer; AutoTokenizer.from_pretrained
 - **tmux 前台进程陷阱**：`python ... | tee log` 占住 shell，`send-keys` 发的命令进了进程 stdin。测试 API 必须从**另一个 window** 发请求
 - **docker exec 跨节点引号陷阱**：`ssh nodeA "docker exec $(docker ps -q) ..."` 的 `$()` 在本地展开 → 必错。解法：写脚本到 Lustre，然后 `ssh nodeA bash /shared/path/script.sh`
 - **远端发命令后必先短 sleep（≤5s）+ capture 确认脚本真启动了**（看到 pytest `collected N items` / 程序日志 / 明确错误信息），再长 sleep 等结果。光看 shell 回显不算
-- **PowerShell→SSH→bash 脚本投递陷阱**：`$VENV` / `$()` 可能被本地 PowerShell 展开，UTF-8 BOM 会污染 shebang，脚本甚至可能落成 0 字节。远端落盘后先 `wc -c` + `sed -n '1,40p'` + `bash -n`，必要时去 BOM。
+- **PowerShell→SSH→bash 脚本投递陷阱**：`$VENV` / `$()` 可能被本地 PowerShell 展开，UTF-8 BOM 会污染首行，脚本甚至可能落成 0 字节。远端落盘后必须完整执行本页的 [canonical fail-closed 投递门禁](#远端-bash-脚本投递必须失败关闭)，不使用弱化三连代替。
 - **路径猜测陷阱**：HF snapshot 只代表权重/processor 资产，不代表 vLLM-Omni deploy yaml。写远端脚本前先 `find <REMOTE_WORK_ROOT> ... -name "*hunyuan*yaml"` 和 `test -f "$MODEL_CFG"`，不要假设 snapshot 下有 `deploy.yaml`。
 - **旧 PR venv/ABI 陷阱**：base commit 不一定兼容当前默认 venv。测旧 PR 先跑 base worktree 的 import/init smoke，确认 custom op / scheduler symbol / vLLM version 匹配；base 起不来时结论是 environment blocker，不是 PR 性能数据。
 

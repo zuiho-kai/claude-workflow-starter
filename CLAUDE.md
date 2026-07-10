@@ -5,23 +5,27 @@
 ## 0. 开工顺序
 
 1. 确认用户正在操作哪个真实仓库；不要用当前 shell 路径或历史对话猜。
-2. 从下面的知识地图选择一个匹配的 `framework/<主题>/_index.md`，只读取当前任务需要的通用方法。
-3. 从 [仓库列表](repos/_index.md) 找当前仓库。只要仓库已经登记，就必须读取 `repos/<仓库>/_index.md`、它链接的 `rules.md`，以及与当前任务同名的仓库主题入口；不能读完 `framework/` 就直接开始查源码。
+2. 先查下面场景触发器。精确命中具体 guide 时直接读 guide，不再先读它所在主题的 `_index.md`；没有直接命中时，才从知识地图选一个 `framework/<主题>/_index.md`。
+3. 只有 canonical `repos/<slug>/` 已由本轮的显式知识路径或仓库映射验证时，才直接读它的 `rules.md`。用户只给 upstream 名、URL、显示名或本地目录名时，先只读 [仓库列表](repos/_index.md) 的映射表，不能自行拼 slug。规则精确指向 owner 就立即完成路由；没有匹配、owner 不清楚或需要职责地图时，再读 `repos/<slug>/_index.md` 和一个主要仓库主题。不能读完 `framework/` 就直接开始查源码。
 4. 仓库主题入口负责继续路由。涉及源码时先看 `components/_index.md` 的职责地图，只属于某个模型时看 `models/_index.md`；确认一个主要 owner 后读取对应 `_index.md` 和其中已有的 `rules.md`，并停止横向展开。只有 live 调用链证明错误跨越另一个模块边界时才读取第二个模块，不能为了保险遍历所有相关目录。找不到 owner 时以 live 源码继续调查，复盘确认稳定边界后再补路由，不要为一次问题临时造模块。
 5. 当前机器地址、路径、账号、cache、venv 和临时状态只从 ignored `local/` 获取，并用 live 命令重新验证。
 6. 不要递归加载整棵知识树；历史错题不是默认入口，只在规则明确提示、出现高度相似错误或用户明确调查历史时搜索。
 
 路由阶段只读取 `_index.md`、当前仓库 `rules.md` 和命中的 owner 规则。仓库 `rules.md` 的场景触发器已经直接指向 owner 时，路由立即完成，不再读取同级 `dev/components/models` 候选入口。只有没有直接匹配时才用职责地图选择 owner。先写出“用户入口 → 主要 owner → 准备核对的源码边界”，再按需要读取一篇具体 guide；不能在 owner 未确定前预读多篇方法正文。
 
-对于已有完整错误日志和可读源码的窄 bug，目标是在开工后三分钟内先给出“根因 / 最小证据 / 未验证边界”。三分钟内无法闭环时先报告缺少哪一段证据，再扩大调查；不能先做历史考古、穷举排除和完整修复设计。
+仓库同名主题按任务目的选，不按通用 guide 所在的物理目录选。例如“写代码”会读 `framework/review/guides/code-taste.md`，但不因此自动进入仓库 `review/`；只有任务本身是 code review、reviewer follow-up 或仓库规则明确指向时才进入。
 
-窄 bug 快路径：用户已经明确仓库名时，先检查约定路径 `repos/<仓库>/rules.md`；存在就直接读取，不再先读 `repos/_index.md` 或仓库 `_index.md`。仓库场景触发器又直接命中 owner 时，直接进入 owner 规则，不再读取通用 debug 索引或仓库 debug fallback。规则文件不存在、触发器没有匹配或 owner 边界不清时，立即回到标准“通用主题 → 仓库主题 → 职责地图”路由。
+实现任务只选一个主题完成路由。仅因一个代码 diff 同时包含测试和文档，不需要在开工时横向读完 `ci/` 和 `docs/` 主题；选定代码 owner 后，先查真实仓库里最近的测试和文档入口。任务主目标命中 CI、测试体系或文档，或本页和仓库场景触发器明确要求专项门禁时，仍必须进入对应主题。
+
+对于已有完整错误日志和可读源码的窄 bug，下面的窄 bug 快路径优先于默认第 2‑4 步完成诊断路由；`code taste` 在真正编辑业务代码前再读。目标是在开工后三分钟内先给出“根因 / 最小证据 / 未验证边界”。三分钟内无法闭环时先报告缺少哪一段证据，再扩大调查；不能先做历史考古、穷举排除和完整修复设计。
+
+窄 bug 快路径：canonical `repos/<slug>/` 已在本轮验证时，直接检查其 `rules.md`；用户只给 upstream、URL、显示名或本地目录时，先只读 `repos/_index.md` 完成映射，不自行拼 slug。仓库场景触发器直接命中 owner 时，直接进入 owner 规则，不再读取通用 debug 索引或仓库 debug fallback。规则文件不存在、触发器没有匹配或 owner 边界不清时，立即回到标准“通用主题 → 仓库主题 → 职责地图”路由。
 
 ## 1. 知识地图：先通用，再仓库，最后代码或模型
 
 | 正在做什么 | 第一个入口 | 识别仓库后必须检查 |
 |---|---|---|
-| code review、边界和公开接口 | [framework/review](framework/review/_index.md) | `repos/<仓库>/review/_index.md` |
+| code review 和 reviewer follow-up | [framework/review](framework/review/_index.md) | `repos/<仓库>/review/_index.md` |
 | 测试选择和 CI | [framework/ci](framework/ci/_index.md) | `repos/<仓库>/ci/_index.md` |
 | 写文档、RFC 和用户可见说明 | [framework/docs](framework/docs/_index.md) | `repos/<仓库>/docs/_index.md` |
 | Git、commit、rebase 和 PR | [framework/git](framework/git/_index.md) | `repos/<仓库>/git/_index.md` |
@@ -32,7 +36,7 @@
 | 多 agent 分工和交接 | [framework/agents](framework/agents/_index.md) | 通常没有仓库补充 |
 | 拆需求、产品闭环和执行计划 | [framework/planning](framework/planning/_index.md) | 仓库入口中对应的业务主题 |
 
-仓库补充目录不一定全部存在，不要预先建立空目录。存在同名仓库主题时必须进入；不存在时以仓库 `rules.md` 的现象路由为准。问题同时影响多个位置时只保留一份规则正文，其他入口链接过去。
+仓库补充目录不一定全部存在，不要预先建立空目录。只进入任务目的选中的同名仓库主题；没有对应主题时以仓库 `rules.md` 的现象路由为准。问题同时影响多个位置时只保留一份规则正文，其他入口链接过去。
 
 ## 2. 通用 P0 硬停
 
@@ -51,6 +55,7 @@
 | 用户正在做什么 | 必读入口 | 最低要求 |
 |---|---|---|
 | 写代码或修改公开接口 | [code taste](framework/review/guides/code-taste.md) | 先理解现有 owner、调用链、测试和用户可见行为 |
+| 开发完成、准备交给 reviewer 或项目 owner | [维护者审查闭环](framework/agents/guides/agent-loop-workflow.md#开发交付的维护者审查闭环) | 独立 reviewer 全量审 diff，修复后重审，直到没有实质问题 |
 | code review 或 reviewer follow-up | [reviewer lens](framework/review/guides/reviewer-lens-audit.md) | 围绕当前 diff 查重复、边界、异常路径和公开影响 |
 | UI、CLI、文档或其他用户可见改动 | [用户可见验收](framework/docs/guides/user-visible-acceptance.md) | 绿测之外还要跑普通用户真实路径 |
 | benchmark 或性能结论 | [benchmark contract](framework/benchmark/guides/benchmark-contract.md) | 先固定版本、工作负载、指标和证据来源 |

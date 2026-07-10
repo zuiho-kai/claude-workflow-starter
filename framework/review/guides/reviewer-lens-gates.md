@@ -155,25 +155,50 @@ Finding closure does not mean full PR clean.
 
 ## Full diff review
 
-For "全量 diff / 项目级 review / 看有没有垃圾修改 / 1800+ 行太大" or before push/PR, first collect:
+Run this gate for a full-project review, a large or suspicious diff, the independent review after development, and every pre-push or pre-PR review. First confirm the real target base from the current branch, PR, or user request. Do not assume the default branch is `main` or that the remote is `origin`.
+
+Record the target ref and resolve it once to `<target-base-sha>`; every command in the same review must use that frozen SHA, not the movable ref. If the task provides only an exact baseline SHA and no target ref, record `TARGET REF: n/a` and use that SHA as `<target-base-sha>`. Then resolve one comparison commit:
+
+- If the user or task froze an exact baseline SHA, use that SHA.
+- For a feature branch or PR, use `git merge-base <target-base-sha> HEAD` and record the resulting SHA.
+- If neither is known, stop and determine the target branch or baseline; do not guess from the current branch name.
+
+For an uncommitted implementation, collect the working-tree surface:
 
 ```powershell
-git diff --stat origin/main...HEAD
-git diff --name-status origin/main...HEAD
-git diff --numstat origin/main...HEAD
+git status --short
+git diff --stat <comparison-commit>
+git diff --name-status <comparison-commit>
+git diff --numstat <comparison-commit>
+git ls-files --others --exclude-standard
 ```
+
+`git diff <comparison-commit>` covers committed, staged, and unstaged tracked content relative to that commit, but not untracked files. Every untracked file that belongs to the task must be opened and reviewed in full; unrelated untracked files remain out of scope and must not be silently included or deleted.
+
+For a committed branch or PR with a clean worktree, collect the branch surface:
+
+```powershell
+git status --short
+git diff --stat <target-base-sha>...HEAD
+git diff --name-status <target-base-sha>...HEAD
+git diff --numstat <target-base-sha>...HEAD
+```
+
+If committed changes and working-tree changes coexist, review `<comparison-commit> -> working tree` first; a `<target-base-sha>...HEAD` review alone is incomplete.
 
 Then run:
 
-1. **Diff census:** top files by added lines, owner, why in scope, whether split is possible.
+1. **Diff census:** top tracked and in-scope untracked files by added lines or file size, owner, why in scope, whether split is possible.
 2. **Semantic trace:** every new helper / dataclass / parser / scheduler / docs default traced to public consumer.
 3. **Garbage pass:** duplicate logic, tensor-valued `or`, silent fallback, unused knob, docs/perf overclaim, helper-only tests, horizontal misses.
 
 Output must include:
 
 ```text
-DIFF REVIEW BASE: <base>...<head>
+DIFF REVIEW SURFACE: <actual resolved target ref/SHA and comparison commit -> reviewed head or working tree>
 TOP FILES REVIEWED: ...
+IN-SCOPE UNTRACKED REVIEWED: <file, owner, size/lines, why it belongs>
+UNRELATED UNTRACKED EXCLUDED: <file, why it does not belong>
 AUDITS RUN: diff-census, semantic-trace, garbage-pass, reviewer-lens-1..4
 KNOWN FINDINGS CLOSED != FULL DIFF CLEAN
 ```
@@ -233,9 +258,9 @@ After rebase, cherry-pick, or conflict resolution, old audits are stale. Review:
 Minimum evidence:
 
 ```powershell
-git range-diff <old-base-or-old-head>...<old-head> origin/main...HEAD
-git diff --stat origin/main..HEAD
-git diff origin/main..HEAD -- <conflict-or-auto-merged-files>
+git range-diff <old-base-sha>...<old-head-sha> <new-base-sha>...HEAD
+git diff --stat <new-base-sha>...HEAD
+git diff <new-base-sha>...HEAD -- <conflict-or-auto-merged-files>
 gh pr view <PR> --json headRefOid
 ```
 

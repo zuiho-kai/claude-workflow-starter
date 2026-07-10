@@ -24,7 +24,7 @@
 10. PR 已经被用户指出“还存在 X”时，不能只看本地 diff；必须同时查 GitHub PR diff、local `origin/main...HEAD`、PR head SHA 三者是否一致，避免本地收窄了但远端没更新或用户看到的还是旧 diff。
 11. 远端验证前先判断它是否和本次 scope 有关。config-only PR 的远端精度失败通常只能作为环境/验证记录，不能反向扩大 PR 内容。
 12. 远端已有旧 worktree 时，不复用脏目录。新建本次专用 worktree前，若 `git diff origin/main...HEAD` 出现大量无关文件，先检查 base/ref 是否陈旧；不要把这种噪音当成 PR diff。
-13. PowerShell -> SSH 的复杂命令禁止现场拼带 `|`、`(`、`)`、`grep -E` 的一行字符串。必须落脚本并 `wc -c` + `sed -n` + `bash -n`，否则容易把 regex 管道在远端 shell 展开成挂起进程或错误命令。
+13. PowerShell -> SSH 的复杂命令禁止现场拼带 `|`、`(`、`)`、`grep -E` 的一行字符串。Bash 命令必须落脚本并完整通过 [canonical fail-closed 投递门禁](../../../../framework/remote/guides/debug-basics.md#远端-bash-脚本投递必须失败关闭)，否则容易把 regex 管道在远端 shell 展开成挂起进程或错误命令。
 14. 远端进程检查不要用宽泛 `pgrep -af "a|b|c"` 这类会被 shell 吃掉的模式；分开查具体 pid / repo path / session name。任何 timeout 后先 kill 自己刚制造的查询残留。
 15. 远端测试被用户中断后，第一优先级是确认资源释放：pid file、`ps -p <pid>`、GPU 4/5/6/7 memory、自己启动的 StageDiffusion/Worker 进程。确认后再回答。
 16. 规则落盘位置必须跟项目框架一致。通用规则写 `framework/`，vLLM-Omni 规则和错题写 `repos/vllm-omni/`；不要写用户个人 Codex memory。

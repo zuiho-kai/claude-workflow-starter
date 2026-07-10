@@ -20,6 +20,7 @@
 | e2e、QPS、latency 或性能对比 | [benchmark scope](benchmark/guides/benchmark-scope.md) 和 [evidence gate](benchmark/guides/evidence-gate.md) | 先固定完整 metric contract，再跑正式 sweep |
 | config、deploy、pipeline 或 CLI cleanup | [配置审计](dev/guides/config-audit-plain-language.md) | 沿入口、默认值、多层加工和新老路径查所有权 |
 | stage config、并行度、设备映射或 worker 启动 | [Model Executor 规则](components/model-executor/rules.md) | 展开最终配置，并在 worker 前验证并行 world size 和可见设备 |
+| runner `_preprocess` 生产的逐请求 phase metadata，例如 `_omni_prompt_len`、`_omni_num_computed_tokens`、`_omni_is_prefill`，或由它们决定的 preprocess/MTP 路由 | [Model Executor 规则](components/model-executor/rules.md#runner-到模型的预处理合同) | 先查共享 worker runner 的 producer 和路由，再查具体模型 consumer |
 | 模型适配、checkpoint 或 HF 对齐 | [model guardrails](review/guides/model-adaptation-guardrails.md) 和对应模型入口 | plumbing 绿灯不等于语义正确 |
 | PR review 或 reviewer follow-up | [review 入口](review/_index.md) 和 [Git/PR 入口](git/_index.md) | 绑定当前 head、diff、live review thread 和真实代码路径 |
 
@@ -27,7 +28,7 @@
 
 - Algorithm 决策前先查 upstream 主入口，包括 `modeling_*`、`generation_*`、tokenizer、scheduler、denoising loop、special token、attention mask 和 KV 路径。
 - Crash 或 `AttributeError` 不是停止点；必须追到错误类型为什么进入当前路径。
-- 仓库专有 bug 必须完成第二次路由：从 [debug 入口](debug/_index.md) 进入仓库主题，再通过 [组件职责地图](components/_index.md) 或 [模型列表](models/_index.md) 找真实 owner。owner 已有 `rules.md` 时必须读取；没有时以 live 源码为准，复盘确认规则具有复用价值后再补，不为单次 issue 预建目录。
+- 仓库场景触发器未直接命中 owner 时，仓库专有 bug 必须完成第二次路由：从 [debug 入口](debug/_index.md) 进入仓库主题，再通过 [组件职责地图](components/_index.md) 或 [模型列表](models/_index.md) 找真实 owner。owner 已有 `rules.md` 时必须读取；没有时以 live 源码为准，复盘确认规则具有复用价值后再补，不为单次 issue 预建目录。
 - 新模型的 `0 missing / 0 unexpected`、shape smoke、无 NaN/Inf 和 mock 权重只证明 plumbing；必须补 semantic parity matrix。
 - L2 只覆盖 CPU/mock 功能且不能触发真实 stage、device 或 GPU 初始化；真实权重、精度、性能和 profiling 属于 L4。
 - 新参数必须有单一 owner、公开 contract 和对应测试；禁止用 `dict.get(...) or fallback`、`hasattr`、随手 `getattr(default)` 或 `generator=None` 掩盖新旧路径不一致。

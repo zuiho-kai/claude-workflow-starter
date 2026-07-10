@@ -20,8 +20,12 @@ Return all matching risk tags with one file/function evidence each:
 - test or validation evidence
 
 Then list selected review lenses. For EACH of the four base audits below,
-return findings (P0 blocker / P1 should-fix / P2 nit) OR explicitly write
+return findings (P0 blocker / P1 should-fix / P2 low-severity substantive issue)
+OR explicitly write
 "none found" — do not skip any audit and do not pre-focus on one over another.
+
+Pure style preferences that do not affect behavior, maintainability, contract,
+or evidence are `nit`, not P2, and do not block a clean verdict.
 
 # Audit 1 — Duplication
 Grep both the repo (project source dirs, scripts, tests, docs as applicable) and
@@ -46,6 +50,10 @@ name which branches handle:
   - None vs 0 vs sentinel
   - feature-flag matrix and old/new execution modes
 Flag any boundary not explicitly handled.
+For every added or changed selector, filter, guard, or routing predicate, verify
+through the same public or production entry point at least one case that should
+enter and one that should not enter, including each observable result. Flag a
+test suite that still passes when the selected behavior is disabled entirely.
 
 # Audit 4 — Surface area
 List every new public knob (CLI arg / API field / extra_args key / config

@@ -12,6 +12,6 @@
 硬规则摘要：
 
 - git commit-push-pull 是部署手段，不是调试手段。
-- 远端复杂命令先落脚本，检查 `wc -c`、前 40 行和 `bash -n`。
+- 远端复杂 Bash 命令先落脚本，并完整通过 [canonical fail-closed 投递门禁](../../../../framework/remote/guides/debug-basics.md#远端-bash-脚本投递必须失败关闭)；不复制弱化命令。
 - serving/benchmark 必须先 fail-fast，单请求 smoke 通过前不进 sweep。
 - 共享机器 graph/profiling 用一个控制会话和低频状态文件，不要密集 SSH 轮询。

@@ -15,7 +15,7 @@
 - "reviewer 应该能看懂"
 - "这个参数以后可能有用"
 
-## 7 条硬标准
+## 8 条硬标准
 
 1. **命名说机制。** 名字必须说清控制对象和机制，且匹配 helper 抽象层级。不要用 `force_ratio`、`align_size`、`compat` 这种需要口头解释的名字。
 2. **逻辑住 owner。** 看数据和语义长期归谁，不看哪个文件方便改。Resolution/bucket 归 processor，AR token 限制归 sampler/model executor，HTTP 字段透传归 serving/protocol。
@@ -23,7 +23,12 @@
 4. **测试放行为 owner。** 测试文件要让 reviewer 一眼知道为什么在这里。只为了 import 方便而放到相邻 test，是错层。
 5. **测试绑定当前 diff。** 每个新增测试必须对应 reviewer comment、当前 PR contract、明确 bug、或刚修复 diff 的最小 regression。答不出就删或移到 owner。
 6. **注释解释策略。** 注释只解释 upstream 对齐、多分支选择、不变量、非显然边界；不要解释语法。
-7. **diff 自带说服力。** 提交前看 `git diff --stat origin/main...` 和 touched diff。文件列表、命名、注释、测试位置、helper 复用、silent fallback 都要经得起第一眼 review。
+7. **diff 自带说服力。** 提交前按 [全量 diff 审查](reviewer-lens-gates.md#full-diff-review) 确认真实基线、当前 tracked 改动和属于本任务的 untracked 文件。文件列表、命名、注释、测试位置、helper 复用、silent fallback 都要经得起第一眼 review。
+8. **条件分支要有正反对照。** 新增或修改选择、过滤、拦截或路由条件时，必须从同一个对外或生产入口至少测一个“应进入”和一个“不应进入”的例子，并断言用户或系统能观察到的结果。两个输入结构相同但语义不同时尤其容易漏测；只测负路径会让“把整个功能禁用”也误绿。
+
+## 写完不等于完成
+
+非琐碎开发任务在作者自测后，还必须进入 [开发交付的维护者审查闭环](../../agents/guides/agent-loop-workflow.md#开发交付的维护者审查闭环)。作者不能用“自审 0 finding”代替独立 reviewer；修复 finding 后也不能只验旧问题，必须重审当前完整 diff。
 
 ## 需要下钻的场景
 

@@ -24,12 +24,7 @@ Self-check:
 
 ## Diff smell pass
 
-Before commit / push:
-
-```bash
-git diff --stat origin/main...
-git diff origin/main... -- <changed-files>
-```
+Before commit / push, resolve the real target base and collect the current tracked and untracked surface with the canonical [full diff review](reviewer-lens-gates.md#full-diff-review). Do not hardcode a remote or default branch, and do not inspect only `HEAD` when the implementation is still in the working tree.
 
 Check:
 

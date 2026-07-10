@@ -48,6 +48,10 @@ Selected lenses:
 3. **Edge cases:** range、边界、默认值、状态矩阵、real checkpoint edge 是否被覆盖。
 4. **Surface area:** 新 public knob / API field / extra_args / schema / streaming protocol 是否真的必要，contract 是否完整。
 
+新增或修改选择、过滤、拦截或路由条件时，Edge cases 必须从同一个对外或生产入口包含至少一个“应进入”和一个“不应进入”的对照，并检查两边可观察的结果。两个输入结构相同但语义不同时尤其要查；如果整个功能被禁用仍能让测试通过，就是实质性 finding。
+
+P2 表示低严重度但仍需修复的实质问题。纯样式、不影响行为、可维护性和证据的建议单独标为 `nit`，不计入 P2。
+
 直接粘贴用的 sub-agent prompt 在 [reviewer_lens_prompt](reviewer-lens-prompt.md)。
 
 ## 什么时候升级

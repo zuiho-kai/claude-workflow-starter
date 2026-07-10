@@ -19,16 +19,14 @@ main.py: error: unrecognized arguments: --disable-log-requests
 
 ### 强制启动 gate
 
-远端启动任何 serving / benchmark 前，先跑下面四个 gate；任一失败，禁止进入长跑：
+远端启动任何 serving / benchmark 前，先跑下面四个 gate；任一失败，禁止进入长跑。第 2 项的唯一标准是 [远端 Bash 脚本投递门禁](debug-basics.md#远端-bash-脚本投递必须失败关闭)，本页不再维护弱化副本。
 
 ```bash
 # 1. 参数来自当前 worktree + 当前 venv，不凭记忆
 $VENV/bin/python -m vllm_omni.entrypoints.cli.main serve --help | grep -E 'deploy-config|chat-template|chat-template-content-format|port'
 
 # 2. 脚本投递有效
-wc -c /tmp/run_x.sh
-sed -n '1,80p' /tmp/run_x.sh
-bash -n /tmp/run_x.sh
+# 先执行 debug-basics 的 canonical fail-closed gate，全部通过才继续。
 
 # 3. 资源真空闲，不靠 free-memory 猜
 nvidia-smi --query-compute-apps=gpu_uuid,pid,process_name,used_memory --format=csv,noheader,nounits || true

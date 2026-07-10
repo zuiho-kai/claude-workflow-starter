@@ -91,7 +91,7 @@ export TMPDIR=/tmp
 - target deps 放 `<REMOTE_WORK_ROOT>/pydeps-pr3297-accuracy`，至少需要 `FlagEmbedding`、`datasets`、`torchmetrics`；避免覆盖 venv 自带的 `numpy` / `huggingface_hub` 等核心包。
 - B3 没有 `cublasLt.h`，默认 FlashInfer MoE JIT 会失败；必须显式 `VLLM_USE_FLASHINFER_MOE_FP16=0` 走 TRITON MoE。
 - 不要把 `TMPDIR` 指到 `<REMOTE_WORK_ROOT>/tmp`，ZMQ IPC 会报 `Operation not supported (addr='ipc://<REMOTE_WORK_ROOT>/tmp/...')`；用 `/tmp`。
-- PowerShell 到 SSH 的复杂脚本不要嵌套引号直接传。临时脚本用本地 LF 文件 `scp` 到 `/tmp`，远端先 `wc -c` + `bash -n`，避免空脚本、CRLF、变量提前展开。
+- PowerShell 到 SSH 的复杂脚本不要嵌套引号直接传。临时 Bash 脚本用本地 LF 文件按已批准的投递方式落到 `/tmp`，远端必须完整执行 [canonical fail-closed 投递门禁](../../remote/guides/debug-basics.md#远端-bash-脚本投递必须失败关闭)，避免空脚本、BOM、CRLF 和变量提前展开。
 
 2026-06-02 跑 PR #3297（head `5b5a4b3850edf88cd84499ff3afbd23874d43a6f`）的有效结果目录：
 

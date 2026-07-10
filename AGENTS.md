@@ -2,12 +2,12 @@
 
 Before doing any work, read `CLAUDE.md`. It is the repository-neutral routing and safety entrypoint.
 
-Then follow one routing order:
-
-- Choose the matching general topic from the map in `CLAUDE.md` and read its `framework/<topic>/_index.md`.
-- Identify the repository that actually owns the task from `repos/_index.md`.
-- If that repository is registered, read its `_index.md` and any linked `rules.md` before changing code, running remote jobs, benchmarking, committing, or pushing.
-- Never apply one repository's rules, machine paths, credentials, remotes, or model assumptions to another repository.
+Then follow the exact routing order in `CLAUDE.md`. A scenario that directly
+links a guide does not require its topic index first. Use `repos/_index.md` only
+when the canonical `repos/<slug>/` is not already verified; never invent a slug
+from an upstream URL, display name, or local directory. Once a repository rule
+directly identifies the owner, stop navigation. Never apply one repository's
+rules, machine paths, credentials, remotes, or model assumptions to another.
 
 Before adding or moving knowledge, read `CONTRIBUTING.md`, update the nearest `_index.md`, and run `python tools/check_knowledge_tree.py`.
 
