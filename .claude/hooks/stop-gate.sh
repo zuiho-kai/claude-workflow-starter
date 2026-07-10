@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # stop-gate.sh — Stop hook 综合门禁
 #   1. 检测本轮有代码改动 → 提醒去远端跑测试
-#   2. 检测本轮有实际工具执行失败 → 提醒写 error book / memory
+#   2. 检测本轮有实际工具执行失败 → 提醒写入最近的 incidents/ 或稳定指南
 
 input=$(cat)
 transcript_path=$(printf '%s' "$input" | grep -oE '"transcript_path"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -E 's/.*"([^"]+)"$/\1/')
@@ -58,7 +58,7 @@ if $has_code_change; then
 fi
 
 if $has_tool_failure; then
-    msg="${msg}\\n• 检测到工具执行失败 → /claudeception 落盘项目经验和教训反思（diff 给用户确认后再写）。"
+    msg="${msg}\\n• 检测到工具执行失败 → /claudeception 判断是否写入最近的 incidents/ 或稳定指南（diff 给用户确认后再写）。"
 fi
 
 msg="${msg}\\n\\n回 'skip' 跳过。"

@@ -16,4 +16,6 @@ secrets.*
 *.key
 askpass*.sh
 *.local.md
-docs/remote_server.md
+
+# 当前机器信息；可复用知识必须脱敏后写入 framework/ 或 repos/
+local/

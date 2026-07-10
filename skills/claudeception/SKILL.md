@@ -1,9 +1,9 @@
 ---
 name: claudeception
 description: |
-  落盘项目经验和教训反思——把会话里的踩坑写到 .claude_errors/，常识写到 memory/。
-  触发：/claudeception 命令、用户说"记到 error book / 加到 memory"、调试 >10 分钟、反复试错的任务结束后。
-  不生成新 skill。展示 diff 给用户确认后再写。
+  把会话中的可复用经验和具体错题写回当前仓库的 framework/ 或 repos/。
+  触发：/claudeception、用户要求“落盘/记住/写错题”，或一次复杂排障结束后。
+  写入前先查重复，展示修改内容并得到用户确认；不生成新 skill。
 allowed-tools:
   - Read
   - Write
@@ -13,52 +13,57 @@ allowed-tools:
   - AskUserQuestion
 ---
 
-# Claudeception — 落盘项目经验 + 教训反思
+# Claudeception — 把经验写回知识目录
 
-踩坑 → `.claude_errors/<topic>.md` 追加；常识 → `memory/<subdir>/<topic>.md`。先 grep 重复，再展示 diff，确认后再写。
+## 先判断放在哪里
 
-## memory subdir 路由
+1. 换到无关仓库仍然成立 → `framework/<主题>/`。
+2. 依赖某个仓库的代码、命令或流程 → `repos/<仓库>/<主题>/`。
+3. 根因属于多个模型共用的代码 → `repos/<仓库>/components/<模块>/`。
+4. 根因只属于某个模型 → `repos/<仓库>/models/<模型>/`。
+5. 当前机器地址、账号、cache 或 venv → ignored `local/`，不进入知识页面。
 
-| 关键字 | subdir |
-|--------|--------|
-| SSH / Slurm / docker / 容器 / Lustre / tmux / 远端环境变量 | `remote/` |
-| HF / HuggingFace / baseline / prompt / tokenizer | `hf/` |
-| CI / pytest / fixture / accuracy test / `tests/` | `ci/` |
-| 用户偏好 / 用户纠正 / 调试方法论 | `feedback/` |
-| 项目快照 / 不再活跃的模型考古 | `archive/<project>/` |
+具体失败写到最近目录的 `incidents/`；稳定方法写到 guide、rules 或 architecture。完整规则见 `docs/framework_layout.md`。
 
-不确定就问用户，禁止凭感觉新开 subdir。
+## 写之前
 
-## 格式
+1. 从 `framework/_index.md` 和 `repos/_index.md` 找最近入口。
+2. 用标题、错误签名和关键词全文搜索，确认没有重复正文。
+3. 明确页面最终路径和需要更新的 `_index.md`。
+4. 去掉私人 host、token、账号、私钥和用户绝对路径。
 
-**Error book**（追加）：
-```markdown
-## YYYY-MM-DD — <标题>
-**症状**：… **根因**：… **解法**：… **对未来的提醒**：…
-```
+## 错题格式
 
-**Memory**：
-```markdown
----
-name: <标题>
-description: <一句话摘要，具体到能判断相关性>
-type: feedback | project | reference | rule
----
-<内容>
+从 `templates/incident.md` 开始，一篇只写一件事故。至少包含：
 
-**Why:** … **How to apply:** …
-```
+- 编号；
+- 归属；
+- 状态；
+- 搜索词；
+- 影响范围；
+- 当时在做什么、现象、影响、原因、修复、验证和防复发。
+
+根因没查清时状态写“待归类”或“处理中”，禁止把猜测伪装成结论。
+
+## 稳定经验格式
+
+普通 Markdown 即可，不要求 YAML。标题和正文要让人能直接搜索；在最近 `_index.md` 增加一行“遇到什么 → 查看哪里”。
+
+如果经验来自一篇错题，在错题末尾增加“已提炼到”链接；稳定页面不复制完整事故经过。
 
 ## 写完必做
 
-1. `memory/<subdir>/_index.md` 加一行（钩子 + 链接）
-2. 新开 subdir 才动 `memory/MEMORY.md`，已有的不碰
-3. 同一坑 `.claude_errors/` 出现 ≥2 次 → 提醒升级到 `CLAUDE.md` 硬规则，附两次日期
-4. 单文件 >10 条或 >2000 字 → 按主题拆 `<file>_<subtopic>.md`，原文件留索引
+1. 更新当前目录 `_index.md`。
+2. 如果新建了子目录，更新上一层 `_index.md`。
+3. 修复所有相对链接。
+4. 运行 `python tools/check_knowledge_tree.py`。
+5. 同一类错误反复发生且需要每次开工拦截时，再建议升级到 `CLAUDE.md`。
 
 ## 不要
 
-- 生成新 SKILL.md
-- 重复写已有内容
-- 记显然事实 / 一次性事件
-- 留密码 / IP / 用户名（用 placeholder）
+- 写入系统、全局或个人 memory。
+- 建立 `_private/` 或第二套索引。
+- 生成新 `SKILL.md`。
+- 重复已有正文。
+- 保存一次性聊天流水账、完整长日志或未经验证的猜测。
+- 保存密码、真实 IP、账号、私钥或用户绝对路径。

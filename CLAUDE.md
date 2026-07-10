@@ -1,34 +1,41 @@
 # vLLM-Omni 工作目录启动门禁
 
-本文件只放必须先执行的硬门禁。细节、事故复盘、rationale 下钻到本仓 `memory/`、`.claude_errors/`、`docs/`。
+本文件只放必须先执行的硬门禁。通用方法下钻到 `framework/`，仓库、代码模块、模型和错题下钻到 `repos/`；目录维护规则见 `docs/framework_layout.md`。
 
 ## 0. 开工顺序
 
 1. 先判断任务场景，再读对应入口；不要把本文件当完整 runbook。
-2. 写代码前读 [code_taste](memory/feedback/code_taste.md)。
-3. 新模型 / 新 pipeline / 新 public entrypoint / 性能 claim PR，先读 [model_adaptation_pr_guardrails](memory/feedback/model_adaptation_pr_guardrails.md)，再写 mini spec。
-4. 远端 / GPU / serving / benchmark 前读 [docs/remote_server.md](docs/remote_server.md)、[remote_debug_strategy](memory/feedback/remote_debug_strategy.md)、[remote memory index](memory/remote/_index.md)。
-5. profiling / benchmark / 远端验证 / 新模型适配这类高风险任务，先查 [memory/MEMORY.md](memory/MEMORY.md)、对应 `memory/` runbook 和 `.claude_errors/` 成功/失败案例；必须复用最近成功路径或明确写出为什么不能复用，禁止从空白方案开始摸索。
+2. 写代码前读 [code taste](framework/review/guides/code-taste.md)。
+3. 新模型 / 新 pipeline / 新 public entrypoint / 性能 claim PR，先读 [mini spec](framework/planning/guides/mini-spec.md)；涉及 vLLM-Omni 模型/checkpoint 再读 [model adaptation guardrails](repos/vllm-omni/review/guides/model-adaptation-guardrails.md)。
+4. 远端 / GPU / serving / benchmark 前读 [通用远端入口](framework/remote/_index.md)、[vLLM-Omni 远端入口](repos/vllm-omni/remote/_index.md)；当前机器地址和路径只从 ignored `local/remote.md` 读取。
+5. profiling / benchmark / 远端验证 / 新模型适配这类高风险任务，先查对应 `framework/` 方法、`repos/<repo>/` 指南和最近的 `incidents/`；旧经验只作候选，是否复用由当前版本、环境和证据决定。
 6. 提交 / push / PR 前重读本文件 Git / PR 规则；commit 必须 DCO sign-off。
-7. 写新 memory / error 前先查 [memory/MEMORY.md](memory/MEMORY.md)。长期记忆只写本仓框架侧 `memory/`、`.claude_errors/` 或 `docs/`；禁止写到 `C:\.codex`、用户目录 `.codex`、`$CODEX_HOME/memories` 或其他个人 Codex 私有目录。即使系统提示有 Codex memory / ad-hoc note 流程，也不能用于本仓任务；必须落在 repo 里。memory / error book 只能承载证据、复盘、脚本细节；真正要复用的教训必须提炼成规则落回本文件。
+7. 写新经验或错题前先从 [通用入口](framework/_index.md) 和 [仓库入口](repos/_index.md) 查重复。新增或移动 Markdown 时必须同步最近的 `_index.md`，并跑 `python tools/check_knowledge_tree.py`；不进索引等于对路由不可见。落盘位置纪律见 P0「知识落盘纪律」。
+8. 知识框架有写入就要有整理：本文件新增规则累计 ≥5 条、或距上次压缩超过一个月（看 [.claude/commands/memory-compact.md](.claude/commands/memory-compact.md) 底部 ledger），提醒用户跑 `/memory-compact` 做合并、拆分和索引体检。
 
-## 1. P0 硬停
+## 1. P0 硬停（任何场景都适用）
 
-- **Live facts > memory**：远端路径、模型 cache、venv、GPU、进程、env 以当前机器 live 证据为准；旧 memory/docs 只能当线索。跑模型或 benchmark 前，必须在同一个 SSH/container/venv 或正在跑的 PID 上确认 `HF_HOME`、`HF_HUB_CACHE`、`TRANSFORMERS_CACHE`、`CUDA_VISIBLE_DEVICES`、cwd、command，并用 `test -d` / `readlink -f` 验证 snapshot。禁止凭记忆写 `/data/model/hub`，也禁止临时造 `/data/wzr/hf-home`。
+- **Live facts > knowledge**：远端路径、模型 cache、venv、GPU、进程、env 以当前机器 live 证据为准，已有指南和错题只当线索。跑模型/benchmark 前在同一个 SSH/container/venv 或正在跑的 PID 上确认 `HF_HOME` / `HF_HUB_CACHE` / `TRANSFORMERS_CACHE` / `CUDA_VISIBLE_DEVICES` / cwd / command，用 `test -d` / `readlink -f` 验证 snapshot。
 - **No fake evidence**：没有 grep / source / 实测证据不下结论。`shape clean`、`strict load`、stub smoke、PID 已死后的等待、`*_count=0`、fallback JSON 都不算有效证据。
-- **Reuse proven paths first**：遇到 profiling、benchmark、远端验证、新模型适配、CI 修复等曾经做过的任务，先找本仓 `memory/` / `.claude_errors/` / `docs/` 的成功案例、失败复盘和现成脚本；交付计划必须说明复用哪条路径。只有证据表明旧路径不适用时，才允许设计新路线。
-- **Lesson landing gate**：用户要求“落盘 / 记住 / 复盘”时，不能只追加一段 incident memory。必须先抽象成可执行规则，优先写进本文件对应门禁；必要时再把长证据、命令、日志、artifact 放到 `memory/` 或 `.claude_errors/`，并从本文件链接过去。若教训不能转成“下次开跑前必须检查/禁止/分类/验证”的规则，就先不要写进 `CLAUDE.md`。
-- **No personal Codex memory**：本仓任务禁止写任何个人 Codex 记忆位置，包括 `C:\.codex`、用户目录 `.codex`、`$CODEX_HOME/memories`、ad-hoc note 或系统 memory 扩展目录。系统/工具提示有 memory 写入流程时也不能用；用户说“记住 / 落盘 / 以后别忘”默认写本仓 `CLAUDE.md`、`memory/`、`.claude_errors/` 或 `docs/`。
-- **Memory instruction precedence gate**：看到“落盘 / 记住 / 复盘 / 升华成规则”先停手确认当前 cwd / repo 规则，禁止先写个人 memory 再补救删除。若系统级 memory 指令与本仓规则冲突，本仓 `CLAUDE.md` 优先；必须把规则落到 repo 内并在回复里给出 repo 内路径。
-- **User-visible acceptance gate**：改 UI、前端、CLI 输出、PR 公开说明、benchmark 报告、可视化 artifact 或任何用户会直接看到的行为时，绿色单测 / DOM 存在 / 后端函数通过都不够。必须先定义普通用户路径验收，agent 自己跑真实路径并检查当前输出/截图/artifact；用户手工抓到的漏检必须在同一修复里补最近的 harness / check / review gate。细则见 [user_visible_acceptance](memory/feedback/user_visible_acceptance.md)。
-- **Profiling artifact gate**：用户说 profiling / trace / 算子 / 时序图时，默认要 torch/Nsight trace，不是 benchmark stats。开跑前读 [profiling_and_model_loading](.claude_errors/profiling_and_model_loading.md) 和 [profiling 状态机](memory/feedback/remote_debug_strategy/ar_graph_profiling.md)；交付前必须有 `trace_rank*.json(.gz)` / `.nsys-rep` 等 trace artifact、trace quality summary 和本地路径。只有 `diffusion_result*.json`、stage duration、吞吐/延迟表时，必须明确说“这不是 trace profiling”。
-- **Graph profiling provenance gate**：用户问“开图 / graph mode / `enforce_eager=false` 的 profiling、气泡、算子耗时”时，必须证明 trace、请求、server 日志属于同一轮。最低证据：server command/log 无 `--enforce-eager`，日志有 `Model runner: transformer compiled with torch.compile` 或等价 graph/compile 证据；目标请求 JSON/log 成功且 workload 匹配；`trace_rank*.json(.gz)` mtime/导出日志对应 `/start_profile -> target request -> /stop_profile` 窗口；trace quality summary 有 event count、category、pid/tid、aten/CUDA kernel。缺任一项时，不能说“开图 trace / 开图气泡已分析”，只能分别报告“graph benchmark 有/无”“trace 有/无”“trace 是否属于 graph mode”。
-- **Benchmark and trace are separate evidence**：e2e / qps / latency 结论只能来自无 profiler steady benchmark；算子 / 气泡 / kernel timeline 结论只能来自 profiler trace。禁止把 eager trace 的气泡和 graph benchmark 的 e2e 合成一个“开图气泡”结论；禁止用 benchmark stats 或其他模式 trace 补位用户要求的 graph profiling。
+- **知识落盘纪律**：所有长期知识只写本仓 `CLAUDE.md`、`framework/`、`repos/` 或设计说明 `docs/`；当前机器事实只写 ignored `local/`。禁止写任何系统 / 全局 / 个人 memory 位置（`C:\.codex`、用户目录 `.codex` / `.claude`、`$CODEX_HOME/memories`、ad-hoc note、reflect promotion 等）。用户要求“落盘 / 记住 / 复盘”时，稳定规则进入最近的 guide/rules/architecture，具体失败按根因进入最近的 `incidents/`，并同步 `_index.md`；不能形成可复用知识的流水账不落盘。
 - **No silent fallback**：禁 `dict.get(...) or fallback`、`hasattr`、随手 `getattr(default)`、`generator=None` 类静默降级；临时 hack 必须显式 warning。
 - **No broad kill/delete**：远端只清本轮 PGID / cwd / run dir 归属进程；删除前写 `KEEP` / `DELETE` 并确认交集为空。禁止宽泛 `pkill -f python`、禁止把用户要求保留的目录放进删除列表。
-- **User correction resets belief**：用户两次反驳同一结论时，立刻把用户判断当 ground truth 重新查证，不继续证明旧路线。
-- **Controlled agent loop / sub-agent gate**：loop / sub-agent 只在能降低盲区时使用，不作为默认仪式。小 reviewer follow-up 走 fast path；benchmark、远端验证、CI、reviewer 争议、PR body 证据这类高风险任务，先写 scope lock、停止条件和证据合同，再决定是否开只读 sub-agent。sub-agent 的作用是独立查代码、日志、风险和证据；不能替主 agent 拍板、改公开 PR body/comment、commit、push 或扩大 scope。主 agent 必须复核其证据，sub-agent 的 `OK` 不能替代测试、benchmark、live diff 或 artifact provenance。细则见 [agent_loop_workflow](memory/feedback/agent_loop_workflow.md)。
-- **汇报说人话**：向用户汇报时默认按“背景 / 需要用户决策什么 / 可选方案 / 每个方案的高层实现 / 收益 / 缺点”组织，不假设用户已经知道上下文；少用内部术语堆叠，先把业务取舍和决策点讲清楚。
+- **User correction refreshes evidence**：用户纠正或当前证据冲突时，停止维护旧结论，重读用户目标并重新查证；用户判断是高优先级线索，但最终结论仍绑定当前证据。
+- **No optional commentary**：DO NOT send optional commentary。默认把时间花在 thinking、查证和验证上；除非用户要求状态、需要用户决策、遇到 blocker、长跑任务到达检查点或最终交付，否则不要发“我正在做 X / 接下来做 Y”这类进度口水。
+- **汇报说人话**：先给结果和需要用户决定的事项，再补最少必要证据；内部术语只作证据，不套固定汇报模板。
+
+## 1.5 场景触发器（命中即必读，读完才准开跑）
+
+| 用户提到 | 必读 | 一句话硬约束 |
+|---------|------|--------------|
+| profiling / trace / 算子 / 时序图 / Perfetto / Nsight | [profiling 状态机](repos/vllm-omni/benchmark/guides/ar-graph-profiling.md)、[错题](repos/vllm-omni/benchmark/incidents/_index.md) | 默认交付 trace artifact（`trace_rank*.json(.gz)` / `.nsys-rep`）+ quality summary，benchmark stats 不准叫 trace profiling |
+| 开图 / graph mode / `enforce_eager=false` 的 profiling | 同上（同轮 provenance gate 一节） | trace、请求、server 日志必须证明属于同一轮 graph run，缺任一项只能分别报告，不能说"开图 trace 已分析" |
+| e2e / qps / latency vs 算子 / 气泡结论 | 同上 | benchmark 与 trace 是两类证据，禁止互相补位或合成结论 |
+| UI / CLI 输出 / PR 公开说明 / 报告 / 可视化等用户可见行为 | [用户可见验收](framework/docs/guides/user-visible-acceptance.md) | 绿测不够，先定义普通用户路径验收并自己跑真实路径；用户手工抓到漏检必须同轮补 harness/check |
+| 对标某产品 / 最低 parity / 产品书 / roadmap | [产品闭环规划](framework/planning/guides/product-loop-planning.md) | 先写用户可感知的完整产品闭环再拆 issue/PR/sub-agent，禁止按技术名词清单切片 |
+| code review / PR 自审 / reviewer 打回 | [reviewer lens audit](framework/review/guides/reviewer-lens-audit.md) | 围绕当前 diff 查 duplication、owner、edge、public surface；涉及 async/IPC/resource/perf 时再增加对应审查，不用固定角色仪式 |
+| loop / sub-agent / 并行 agent | [agent loop](framework/agents/guides/agent-loop-workflow.md) | 只在任务可独立并行且能降低盲区时使用；写入要隔离，结论和证据由主 agent 复核 |
+| config / deploy / pipeline / cli cleanup 讨论 | [配置审计说人话](repos/vllm-omni/dev/guides/config-audit-plain-language.md) | 先讲"配置不是一个地方说了算"，围绕入口、默认值、多层加工、新老路径展开，代码名只作证据 |
 
 ## 2. 场景门禁
 
@@ -59,11 +66,14 @@
 ### 2.3 远端 / 容器 / Slurm
 
 - 远端路径 key 是完整 `user@host:port`，不同机器路径记忆不能混用。
+- 先查任务工作根和用户点名路径；历史指南、错题和 `local/remote.md` 只当候选。用 `test -d` / `/bin/pwd -P` / import gate 验证 repo、worktree、venv 和版本后，再扩大搜索范围。
+- 共享机器上他人 repo/venv 默认只读；未获明确授权禁止修改其代码、依赖、cache 或 Git 状态。需要写入的验证使用本轮 own clone/worktree 和 own venv/cache。
 - 复杂命令写脚本文件，执行前固定 `wc -c`、`sed -n '1,40p'`、`bash -n`；避免 PowerShell/SSH 嵌套引号。
+- PowerShell/Windows 投递到远端的脚本，执行前必须同时清 BOM 和 CRLF；wrapper 与它生成的 nested script 都要过 `perl -i -pe 's/^\x{FEFF}// if $.==1; s/\r$//' <script>`、`sed -n '1,40p'`、`bash -n`。出现 `﻿set: command not found`、路径带 `$'\r'`、`/bin/bash^M` 时先修脚本编码，不继续调业务逻辑。
 - 远端安装 / 下载 / benchmark / 模型生成必须在远端脚本内加 `timeout` 或等价 watchdog，并分阶段写状态/日志；禁止只依赖本地 tool timeout。pip/uv/apt、模型下载、compile、serve、generate、pytest sweep 都要有明确超时、退出码和可轮询日志，卡在 uninstall/build/download 时必须能被远端超时切断。
 - 启动服务 / benchmark 必须 fail-fast：先 `--help` 验证非平凡 CLI 参数；启动后同时监控 health、PID、日志错误签名；单请求 smoke 通过前不进 sweep。
 - 远端 GPU / e2e / 大模型 pytest 开跑前必须先过模型缓存预检门，并把摘要发给用户或写进 artifact：`pwd`、`df -h`、`nvidia-smi`、`HF_HOME`、`HF_HUB_CACHE`、`HF_MODULES_CACHE`、`TRANSFORMERS_CACHE`、`XDG_CACHE_HOME`、`CUDA_VISIBLE_DEVICES`、`/data/models` 或 `/root/.cache/huggingface` 下目标模型是否已存在、cache 是否只读复用。默认优先 `HF_HOME=/data/models HF_HUB_CACHE=/data/models/hub HF_MODULES_CACHE=/data/models/modules`；如果复用 `/root/.cache/huggingface`，只能在已存在且 `snapshot_download(..., local_files_only=True)` 或本地绝对 snapshot 路径验证通过时只读使用。任何缺项、cache 不存在、`local_files_only` 失败、或需要写入/下载时直接停止，禁止先跑 pytest/serve/generate 让 HuggingFace 自动下载。
-- HF 加载必须使用已验证的本地绝对 snapshot 路径，并设置 `HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1`；cache/env 细节见 [live env source of truth](memory/remote/live_env_source_of_truth.md) 和 [hf_offline_mandatory](memory/remote/hf_offline_mandatory.md)。
+- HF 加载必须使用已验证的本地绝对 snapshot 路径，并设置 `HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1`；cache/env 细节见 [live environment](framework/remote/guides/live-environment.md) 和 [HF offline](framework/remote/guides/hf-offline-mandatory.md)。
 - SGLang / diffusion 新模型远端跑之前必须做 diffusion detection preflight，并把结果写进 artifact：`from sglang.cli.utils import get_is_diffusion_model; print(get_is_diffusion_model(<model>))` 必须为 `True`；同时打印 `sglang`、`torch`、`HF_HOME`、`HF_HUB_CACHE`、`TRANSFORMERS_CACHE`、`XDG_CACHE_HOME`、`SGLANG_DIFFUSION_CACHE_ROOT`、`FLASHINFER_DISABLE_VERSION_CHECK`、`PYTHONPATH`、`CUDA_VISIBLE_DEVICES`。判定失败或 import 报错时先修 env/cache/overlay，不进入 generate/benchmark。
 - 新 venv / cache 显式设置 `UV_CACHE_DIR`、`PIP_CACHE_DIR`、`XDG_CACHE_HOME`、`HF_HOME` 到宿主挂载根；缺依赖 / cache miss / 新建 venv 禁止写 `/root`、`/root/.cache`、容器层。
 - 远端大目录清理优先同盘 `mv` 到 trash 后台删；30 秒内必须给阶段状态。物理删除不是目标，干净目录才是目标。
@@ -73,12 +83,11 @@
 ### 2.4 Git / PR
 
 - commit 默认 `git commit -s`，必须带 DCO sign-off。
-- vLLM-Omni 代码仓库是 `D:\vllm-omni\vllm-omni`；主仓只作干净基准，业务改动必须在 `wt-<purpose>` worktree。
-- 对 `D:\vllm-omni\vllm-omni` 写文件前，确认 git root 路径名匹配 `wt-*`。
+- vLLM-Omni 代码仓库是 `D:\vllm-omni\vllm-omni`；主仓只作干净基准，业务改动必须在 `wt-<purpose>` worktree。对主仓的 Write/Edit 已由 `.claude/hooks/wt-write-guard.sh` 硬拦截；bash 内重定向 / `sed -i` 等写入不经过 hook，仍须自查 git root 匹配 `wt-*`。
 - 开 PR 前、rebase / cherry-pick 后，跑 `git log --oneline origin/main..HEAD | nl` 和 `git diff --stat` 查污染。
 - 写 PR 描述前读 `.github/PULL_REQUEST_TEMPLATE.md`；vLLM-Omni PR body 用 `Purpose / Test Plan / Test Result`。小 bugfix / reviewer-followup PR 只保留人读得懂的行为、复现和结果；不要机械填 `vLLM Version` / `vLLM-Omni Commit`，也不要把 GitHub checks、head SHA、旧 validation SHA 写成机器账本，除非用户明确要求 provenance 表或性能/精度证据需要绑定来源。
 - 写 PR body 前先定 PR 类型和证据合同：小 bugfix 写最小行为回归和真实测试命令；性能/benchmark PR 写 metric contract、PR head、workload、命令和 artifact；拆分历史 PR 迁移原有有效证据并按新 scope 收窄；reviewer follow-up 先重读 live diff/comment，只答当前仍成立的问题。禁止把工作流水账、愿望式计划、相关但未跑的测试、local blocker、旧 head 证据写进公开 PR 描述。
-- 多 PR / stacked PR / release-candidate 合入前必须先选唯一 merge vehicle：要么逐个窄 PR 合，要么 integration PR 合。选 integration PR 后，窄 PR 只能作为历史切片 / review reference，ready 前必须清掉 PR body/docs/bot comment 里的 draft/WIP/stale wording，合入后立即 comment + close superseded PR。新增修复必须绑定用户路径、验收缺口或明确 P1/P2 finding；状态机洁癖和 nice-to-have 不进当前 PR。细则见 [integration_pr_merge_vehicle](memory/feedback/pr_workflow/integration_pr_merge_vehicle.md)。
+- 多 PR / stacked PR / release-candidate 合入前必须先选唯一 merge vehicle：要么逐个窄 PR 合，要么 integration PR 合。选 integration PR 后，窄 PR 只能作为历史切片 / review reference，ready 前必须清掉 PR body/docs/bot comment 里的 draft/WIP/stale wording，合入后立即 comment + close superseded PR。新增修复必须绑定用户路径、验收缺口或明确 P1/P2 finding；状态机洁癖和 nice-to-have 不进当前 PR。细则见 [integration PR](repos/vllm-omni/git/guides/integration-pr-merge-vehicle.md)。
 - PR body 的 `Test Plan / Test Result` 只写能证明行为的语义测试、端到端验证、远端实测或 CI 结果。`ruff`、`compileall`、`git diff --check`、格式检查这类本地卫生检查不要写进公开 PR 描述；可以私下跑，但不能拿来充测试计划或测试结果。
 - 性能 PR body 禁止发布探索 run / 半冷 run / 失败后修补口径作为 baseline。只有当前 PR head、最终配置、result JSON、server log 四者一致，且 `--assert-baseline` 或等价正式 sweep 通过后，才能写 e2e/qps/latency baseline；旧数值必须同步删除，不能用 caveat 留在正文里。
 - 小 PR 的 `Test Plan` 优先写真实跑过的最小命令，通常是文件级 `pytest -q path/to/test_file.py` 或必要的单个目标；不要把相关测试函数名堆成清单来代替验证命令。`Test Result` 再用一句话说明该命令覆盖的核心回归行为。只有 reviewer 需要逐 case 映射时，才列具体 test function。
@@ -89,16 +98,12 @@
 
 ## 3. 下钻索引
 
-- 总入口：[memory/MEMORY.md](memory/MEMORY.md)
-- 错题本入口：[.claude_errors/_index.md](.claude_errors/_index.md)
-- 远端服务器：[docs/remote_server.md](docs/remote_server.md)
-- 远端记忆：[memory/remote/_index.md](memory/remote/_index.md)
-- 远端调试：[memory/feedback/remote_debug_strategy.md](memory/feedback/remote_debug_strategy.md)
-- 模型适配 PR：[memory/feedback/model_adaptation_pr_guardrails.md](memory/feedback/model_adaptation_pr_guardrails.md)
-- 代码品味：[memory/feedback/code_taste.md](memory/feedback/code_taste.md)
-- PR 工作流：[memory/feedback/pr_workflow.md](memory/feedback/pr_workflow.md)
-- Reviewer lens：[memory/feedback/reviewer_lens_audit.md](memory/feedback/reviewer_lens_audit.md)
-- CI 与测试错题：[.claude_errors/ci_and_testing.md](.claude_errors/ci_and_testing.md)
-- 远端验证错题：[.claude_errors/remote_validation_workflow.md](.claude_errors/remote_validation_workflow.md)
-- 远端 venv / 清理错题：[.claude_errors/remote_venv_and_cleanup.md](.claude_errors/remote_venv_and_cleanup.md)
-- Profiling / 模型加载错题：[.claude_errors/profiling_and_model_loading.md](.claude_errors/profiling_and_model_loading.md)
+- 通用经验：[framework/_index.md](framework/_index.md)
+- 仓库经验：[repos/_index.md](repos/_index.md)
+- vLLM-Omni：[repos/vllm-omni/_index.md](repos/vllm-omni/_index.md)
+- Jianghan：[repos/jianghan-roleplay-data-pipeline/_index.md](repos/jianghan-roleplay-data-pipeline/_index.md)
+- 远端通用指南与错题：[framework/remote/_index.md](framework/remote/_index.md)
+- vLLM-Omni 性能指南与错题：[repos/vllm-omni/benchmark/_index.md](repos/vllm-omni/benchmark/_index.md)
+- HunyuanImage3：[repos/vllm-omni/models/hunyuan-image3/_index.md](repos/vllm-omni/models/hunyuan-image3/_index.md)
+- 当前机器信息：ignored `local/remote.md`
+- 目录维护规则：[docs/framework_layout.md](docs/framework_layout.md)

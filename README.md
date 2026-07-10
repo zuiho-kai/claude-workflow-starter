@@ -1,148 +1,112 @@
-# Claude Code Workflow Starter
+# Workflow Starter
 
-源自 vLLM-Omni × HunyuanImage-3.0-Instruct 实战的 Claude Code 工作流。**直接拿去用**，不用学不用配，飞轮自动转。
+这是一套可以直接用 Markdown 手工维护的项目知识框架。它把跨仓库通用方法、仓库专有经验、代码模块、模型和错题放在一棵目录树中，避免每次任务把无关内容全部加载。
 
-## 谁该用
-
-- 在 vLLM-Omni 上协作的同事 → clone 这个 starter + `git pull` vllm-omni 主仓库即可开发
-- 做远端 GPU 调试的开发者 → 这套体系对 SSH/Slurm/Docker/Lustre 跑大模型特别强
-- 任何想要"Claude 跨会话不丢失项目知识"的人 → memory + error book + 硬规则三件套
-
-## 怎么用
-
-### Step 1: clone 这个 starter
+## 开始使用
 
 ```bash
 git clone https://github.com/zuiho-kai/claude-workflow-starter.git
-```
-
-### Step 2: 把你的项目代码放进来
-
-```bash
 cd claude-workflow-starter
-git clone https://github.com/vllm-project/vllm-omni.git   # 或你自己的项目
 ```
 
-就这样。CLAUDE.md / memory / .claude_errors / .claude/hooks / skills 都已经在 starter 根目录了，Claude Code 在这个目录下启动就会自动读到。
+如果还需要项目代码，可以把目标仓库克隆到旁边或按自己的 worktree 规则管理。知识仓库用 `repos/<仓库>/` 表示经验归属，不要求把项目代码塞进这个目录。
 
-### 可选：填远端服务器信息
+## 从哪里查
 
-```bash
-cp docs/remote_server.template.md docs/remote_server.md
+- [通用经验](framework/_index.md)：review、CI、docs、Git、debug、benchmark、环境、远端、agent 和规划。
+- [仓库经验](repos/_index.md)：当前登记了 vLLM-Omni 和 Jianghan。
+- [HunyuanImage3](repos/vllm-omni/models/hunyuan-image3/_index.md)：模型架构、HF 对齐、历史分析和错题。
+- [目录维护规则](docs/framework_layout.md)：内容放哪里、错题怎么写、什么时候拆分、怎样更新索引。
+
+不知道归属时，可以先全文搜索：
+
+```powershell
+rg "SSH timeout|shape mismatch" framework repos -g "*.md"
 ```
 
-然后把 `<YOUR_XXX>` 替换成你的真实信息。`docs/remote_server.md` 已在 .gitignore 里，随便写密码也不会 commit。
+## 目录怎样理解
 
-### 推荐：装 codex-plugin-cc
-
-[openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) — 装好后每次 turn 结束自动 code review，也提供 `/review` 手动审查。
-
----
-
-## 这套体系怎么自动转（数据飞轮）
-
-**不需要你手动维护**——`.claude/hooks/stop-gate.sh` 在每次 turn 结束自动跑：
-
-```
-你写代码 / 跑命令
-       ↓
-  Stop hook 触发
-       ↓
-   自动检测：
-       ├─ 有代码改动？ → 提醒去远端跑测试（按 docs/remote_server.md 流程）
-       └─ 有错误痕迹？ → 提醒把新坑写到 .claude_errors/（重复 ≥2 次升级到硬规则）
-       ↓
-   Claude 看到提醒
-       ↓
-   Claude 生成候选记录 → 展示 diff → 你点头确认
-       ↓
-   memory/ + .claude_errors/ + CLAUDE.md 自动长大
-       ↓
-   下次会话 Claude 自动读到这些资产
-       ↓
-   不会再踩同样的坑
+```text
+framework/<主题>/                         # 换仓库仍然成立
+repos/<仓库>/<主题>/                      # 某仓库专有流程
+repos/<仓库>/components/<代码模块>/       # 前端、后端、diffusion 等共享代码
+repos/<仓库>/models/<模型>/               # 模型专有实现和配置
+<最近目录>/incidents/                     # 具体错题
+local/                                    # 当前机器信息，Git 忽略
 ```
 
-**额外的自动化（skills/ 提供）**：
+每个正式目录都有 `_index.md`，说明什么时候查、什么不放这里，以及每个页面的入口。普通维护者不需要编辑 YAML 或修改检查脚本。
 
-- `claudeception` — 数据飞轮核心：从会话自动提炼踩坑记录到 `.claude_errors/`、常识到 `memory/`，条目过多时自动按主题拆分
-- `reflect-system` — Stop hook 后台从对话提取你的偏好/纠正写到 pending review（不会自动应用，因为后台进程没法跟你交互）；打 `/reflect-review` 让 Claude 列出 pending、跟你讨论 diff、确认后才应用到对应 skill
-- `clean-thinking` — 遇到 `Invalid signature in thinking block` API 报错时自动修
+## 新增普通经验
 
-**会话快爆时**：打 `/lastwords` 或 `/遗言`，自动生成交接文档。
+1. 判断内容属于通用主题、仓库、代码模块还是模型。
+2. 在最接近的目录中新建 Markdown。
+3. 在同目录 `_index.md` 增加一行“遇到什么 → 查看哪里”。
+4. 运行：
 
-`/lastwords` 会把当前会话浓缩成一份"遗言"markdown：项目背景、已完成/未完成的工作、关键决策、下一步建议、关键文件清单。标题是轻小说风格（读标题就知道会话死在哪一步）。保存到项目根目录 `遗言/` 文件夹。新会话开头 `cat 遗言/<文件名>` 就能 30 秒接手。
+   ```powershell
+   python tools/check_knowledge_tree.py
+   ```
 
-这是 `.claude/commands/` 里的 slash command（不是 skill），只在你手动打 `/lastwords` 时触发。
+也可以从 `templates/` 复制最接近的例子；不用模板也能完整手工添加。
 
----
+## 新增错题
 
-## 内容物
+错题按根因放在最近的 `incidents/`：
 
-| 资产 | 用途 |
-|------|------|
-| `CLAUDE.md` | 22 条硬规则（含 worktree 约束）+ 项目索引 + Skills 表 |
-| `memory/` | 常识 book（18 篇 frontmatter MD）—— 跨会话项目知识 |
-| `.claude_errors/` | error book —— 踩坑地册（已含 vLLM-Omni 实战 case） |
-| `docs/remote_server.md` | 脱敏版远端 GPU 服务器连接指南 |
-| `.claude/commands/` | `lastwords.md` + `遗言.md`（会话交接 slash command） |
-| `.claude/hooks/stop-gate.sh` | **核心自动化**：每次 turn 结束触发飞轮 |
-| `.claude/settings.json` | 注册上面的 hook |
-| `skills/claudeception/` | 数据飞轮自动积累：踩坑→error book，常识→memory，条目过多自动拆分 |
-| `skills/clean-thinking/` | 修 thinking 块 API 报错 |
-| `skills/reflect-system/` | 自动 reflect 用户纠正 |
+- 通用 SSH、WSL、PowerShell 或 Git 错误 → `framework/<主题>/incidents/`
+- 仓库 CI、benchmark、review 或 remote 错误 → `repos/<仓库>/<主题>/incidents/`
+- 多模型共享代码错误 → `repos/<仓库>/components/<模块>/incidents/`
+- 模型专有错误 → `repos/<仓库>/models/<模型>/incidents/`
 
----
+文件名使用 `YYYY-MM-DD-short-name.md`，正文从 [错题模板](templates/incident.md) 开始。一件事故只保留一篇完整正文，其他目录用链接指过去。
 
-## 为什么这么设计
+## 内容多了怎样拆
 
-22 条硬规则全是从"违反过 N 次"的踩坑里熬出来的——每条末尾"违反过 N 次（YYYY-MM-DD）"就是飞轮转动的痕迹。
+- 单文件达到 300 个非空行或 16 KiB：检查是否已经混入多个主题。
+- 单文件达到 500 个非空行或 32 KiB：必须拆分，或在 `_index.md` 写明暂不拆的原因和复核日期。
+- 一个目录直接放到第 8 个普通页面：按 `guides/`、`incidents/` 或明确业务主题分类。
+- 一个分类目录超过 20 篇当前有效页面：继续按稳定问题主题分类。
 
-starter 把这套机制完整搬过来：**让你少踩同样的坑**。
+工具只提醒、生成模板和修复确定无歧义的链接，不会静默决定语义归属或后台移动文件。
 
-如果你踩到了新坑（22 条没覆盖的），hook 会自动提醒你写到 `.claude_errors/`；写够 2 次它就该升级到 `CLAUDE.md`。**这就是飞轮自己转大的方式**。
+## 当前机器信息
 
----
+真实服务器地址、账号、token、私钥、cache 和 venv 路径只放 Git 忽略的 `local/`。可以从模板开始：
 
-## 远端 GPU 调试体系
+```powershell
+Copy-Item templates/remote-server.md local/remote.md
+```
 
-来自实战：vLLM-Omni 跨节点（SSH + Slurm + Docker + Lustre）跑 80B 模型的踩坑记录。如果你也做类似的工作，重点看：
+正式知识页面不得包含私人 host、凭据或用户绝对路径。去除敏感信息后仍有复用价值的教训，再写入 `framework/` 或 `repos/`。
 
-- **CLAUDE.md** 22 条硬规则里 13 条关于远端/容器（#1-6, #8-20 大部分）
-- **memory/** 里：`remote_node_general.md`、`no_container_ephemeral.md`、`srun_exit_kill_container_procs.md`、`transformers_cache_gotcha.md`、`docker_exec_cwd_workaround.md`、`feedback_remote_debug_strategy.md` 等
-- **docs/remote_server.md** —— SSH/Slurm/tmux/docker 操作模板（脱敏后，首次使用前填 placeholder）
-- **`.claude/hooks/stop-gate.sh`** —— 写完代码自动提醒去远端跑测试
+## 自动检查
 
----
+```powershell
+python tools/check_knowledge_tree.py
+```
 
-## 要改的（少量）
+它会检查：
 
-- `CLAUDE.md` 前 21 条原硬规则全是 vLLM-Omni 实战，**保留作 case study**——用一阵后看哪些不适用你的项目，自己删
-- `memory/` 里 vLLM-Omni 特有的（如 `ar_dit_bridge.md`、`bidirectional_attention.md`）—— 用一阵后清掉，留下通用的
-- `.claude_errors/hunyuan_image3.md` —— 当 case study 看一遍，写自己的之前不要删（学格式）
+- 每个目录是否有 `_index.md`；
+- 页面和子目录是否登记到最近索引；
+- 相对链接是否存在；
+- 错题的文件名、编号、归属、状态和入口是否完整；
+- 文件和目录是否超过拆分限制；
+- `local/` 是否意外进入 Git。
 
----
+脚本不会判断两篇文章是否语义重复，也不会替人决定问题属于哪个代码模块或模型。
 
-## 隐私说明
+## 主要入口
 
-这个 starter 的飞轮机制涉及读取/落盘会话内容，对外发布前请知悉以下行为：
+| 内容 | 路径 |
+|---|---|
+| 开工硬规则 | `CLAUDE.md` |
+| 通用经验 | `framework/` |
+| 仓库、代码模块、模型和错题 | `repos/` |
+| 可复制模板 | `templates/` |
+| 当前机器信息 | `local/`（Git ignored） |
+| 目录设计 | `docs/framework_layout.md` |
+| 索引检查 | `tools/check_knowledge_tree.py` |
 
-- **不会主动上传**：本工具不会把 SSH 密码、API token、私钥推送到任何远端。所有飞轮产出都在本地或你显式 push 的仓库里。
-- **本地落盘**：`reflect-system` 会读 Claude Code 的 transcript，提取你的纠正/反馈片段（截断到 500 字符），保存到 `~/.claude/skills/reflect-system/meta/feedback-log.jsonl`。这是本地文件，不会自动 push，但要知道它在那里。
-- **`.claude_errors/` 默认确认**：写入 `.claude_errors/` 之前 Claude 会展示 diff 并问你；hook 提示语只是建议，不直接落盘。如果你要更严格，把 `.claude_errors/` 也加进 `.gitignore`。
-- **远端密码的存放**：放到 gitignored 的 `*.md` 实例文件（如 `docs/remote_server.md` / `memory/remote/ssh_connection_pattern.md`），**不要**写到环境变量——env var 在 `ps -ef` / `/proc/<pid>/environ` / shell history 里都能看到，反而比物理隔离的 markdown 更危险。
-- **Commit 前自检**：
-  ```bash
-  git status --ignored                       # 看哪些文件被 gitignore 拦了
-  git check-ignore -v <你担心的文件>          # 验证某文件确实被忽略
-  git diff --cached | grep -iE 'password|token|<YOUR_REAL_IP>'  # 自定义 grep
-  ```
-
----
-
-## 故障排查
-
-- **hook 不触发？** 检查 `.claude/settings.json` 是否在项目根；`bash -n .claude/hooks/stop-gate.sh` 验语法；`python -m json.tool .claude/settings.json` 验 JSON 格式
-- **远端连不上？** 读 `docs/remote_server.md` 顶部"首次使用"表，确认 placeholder 全填了
-- **API 报 `Invalid signature in thinking block`？** 打 `/clean-thinking`，自动修
-- **上下文快爆？** 打 `/lastwords` 或 `/遗言`，生成交接文档后开新会话
+框架目标只有一个：让人和 agent 都能沿清晰入口找到需要的最少内容，并且让新经验在下一次任务中真正可查。

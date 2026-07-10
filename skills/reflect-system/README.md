@@ -4,6 +4,8 @@
 
 Ein intelligentes Lernsystem für Claude Code, das aus Ihren Korrekturen lernt und Skills automatisch verbessert.
 
+> Repo override for `workflow-starter`: do not promote project facts, workflow rules, incidents, or personal preferences to global/system/personal memory. Useful learnings must land in repo-local `CLAUDE.md`, `framework/`, `repos/`, or `docs/`; machine facts belong only in ignored `local/`. Otherwise they should not be persisted.
+
 ---
 
 ## 🚀 Quick Start

@@ -7,6 +7,10 @@ allowed-tools: Bash, Read, Write
 
 Promote skill-level learnings to global scope when they appear in multiple repositories.
 
+## Repo Policy Override
+
+Do not use this command to promote learnings from `workflow-starter`. This repository forbids writing project facts, workflow rules, incidents, or personal preferences to system/global/personal memory by default. If a learning is useful here, land it in repo-local `CLAUDE.md`, `framework/`, `repos/`, or `docs/`; machine facts belong only in ignored `local/`. Otherwise do not persist it.
+
 ## What This Does
 
 When you correct Claude in multiple projects, those learnings become candidates for promotion to your global `~/.claude/CLAUDE.md` file. This means Claude will remember them everywhere, not just in specific skills.

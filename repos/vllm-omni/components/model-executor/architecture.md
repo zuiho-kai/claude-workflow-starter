@@ -1,0 +1,17 @@
+# Model Executor 共享架构
+
+## 负责什么
+
+`vllm_omni/model_executor/` 负责组织 AR/LLM 等非 diffusion stage，读取 stage 配置，准备每个 stage 的输入，并把上游输出转换成下游能够消费的数据。
+
+## 主要边界
+
+- `stage_configs/` 描述 stage 组合和运行参数。
+- `stage_input_processors/` 负责跨 stage 数据转换。
+- `models/` 下的实现负责具体模型执行，但模型专有结论仍归对应模型目录。
+
+## 怎样判断问题归属
+
+多个模型共用的 stage 生命周期、配置解析或数据桥接问题归这里；HunyuanImage3 专有 token、attention、checkpoint 或 pipeline 问题归 `models/hunyuan-image3/`。
+
+源码会变化，具体类名和路径在改代码前必须以目标仓库当前版本为准。
