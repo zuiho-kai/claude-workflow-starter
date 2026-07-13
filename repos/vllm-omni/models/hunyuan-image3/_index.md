@@ -15,6 +15,7 @@
 
 | 遇到什么 | 查看哪里 |
 |---|---|
+| 修改公开入口、prompt、AR→DiT、条件图、size 或 seed | [rules](rules.md) |
 | 理解模型和 vLLM-Omni 代码地图 | [architecture](architecture.md) |
 | HF 对齐、prompt 和运行方法 | [model guides](guides/_index.md) |
 | 调查模型专有错误 | [incidents](incidents/_index.md) |

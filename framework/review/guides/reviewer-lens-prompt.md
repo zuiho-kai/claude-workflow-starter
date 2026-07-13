@@ -6,6 +6,26 @@ Use this when spawning a read-only review sub-agent. Do not add a suspected root
 Static review this PR/diff/change. Do not stop after the first valid finding.
 First classify the change by risk type, then audit every selected risk type.
 
+Scope stop: once the frozen base, complete diff including in-scope untracked
+files, and owner chain are verified, stop navigation. Do not recursively read
+unrelated owners, incidents, or history. Read contribution/layout rules only
+when the diff changes the knowledge tree. Add each additional owner only when
+the live producer-consumer trace crosses that boundary.
+
+For every owner in that proven chain, read its existing rules.md if present.
+Inventory every stable constraint ID and mark each PASS / FAIL /
+MISSING_EVIDENCE / NOT_APPLICABLE with file/function/test/run evidence. N/A
+also needs evidence; omission cannot produce a clean result. Group/namespace
+headings do not count as IDs. For an ID with a fixed evidence matrix, report
+every row; one missing row prevents PASS. When an old rules
+page has no stable sub-IDs, treat each bullet or prose paragraph as one source
+unit, quote it, and list every normative requirement you identify inside it.
+Report that page as legacy-unstructured; do not claim exact clause coverage or
+try to infer cardinality from keywords. If the current diff materially edits
+that rule, require stable IDs under the contribution rules. If no owner rules.md exists, write
+"OWNER RULES: none" and continue. Do not search incidents/history to invent
+hidden rules. Novel findings do not offset a missed owner invariant.
+
 Return all matching risk tags with one file/function evidence each:
 - public API / user-facing contract
 - module semantic contract
@@ -76,6 +96,16 @@ option / public function / SSE or OpenAI-compatible response chunk). For each:
     compatible.
 Flag knobs that are accreted/over-defensive.
 
+# Conditional audit — Public ingress and producer-consumer behavior
+Run this for public API, CLI/example, multimodal input, request normalization,
+or cross-stage handoff changes. Enumerate every live public/internal ingress
+that reaches the changed consumer. For each ingress, state where validation
+happens and whether it is before file/network load, decode, allocation, or GPU
+work. Then trace each changed value from producer through every transformation
+to its final consumer, stop/truncation boundary, and failure owner. A field
+being present in a downstream dict is not evidence that behavior is aligned.
+Flag untested or bypassing ingress paths as findings.
+
 # Conditional audit — Path matrix
 Run this when the change touches execution flow, feature flags, public contracts,
 runtime behavior, async/concurrency, resources, or performance. For each
@@ -127,8 +157,9 @@ Return findings in markdown. For each finding, first state:
 1. what bad thing can happen;
 2. why this PR owns it;
 3. the smallest acceptable fix.
-End with one line:
-"RISK TAGS: ...; LENSES: ...; AUDITS RUN: 1,2,3,4[,path,lifecycle,evidence] — N findings (Pa P0, Pb P1, Pc P2)".
+End with:
+"OWNER RULE COVERAGE: <path or none>: X/Y stable IDs inventoried — A pass / B fail / C missing evidence / D not applicable" or "<legacy path>: X/Y source units inventoried — legacy-unstructured, no exact clause-coverage claim" (one line per owner), then
+"RISK TAGS: ...; LENSES: ...; AUDITS RUN: 1,2,3,4[,ingress,path,lifecycle,evidence] — N findings (Pa P0, Pb P1, Pc P2)".
 ```
 
 ## Owner prompts
