@@ -2,6 +2,20 @@
 
 这些规则适用于 HunyuanImage3 的生成、编辑、prompt、AR 采样、AR→DiT 交接、条件图处理和公开入口。只有加粗项目或表格第一列中的 `HY3-数字字母` 是可审计规则 ID；章节标题只是分组，不计入 ID，解释性文字和链接也不计。
 
+## 开发快速入口
+
+- **HY3-0a — 开发阶段按任务选规则。** 开发者只合并下表命中的规则和源码入口，不在编码前手工枚举整页；任务命中多行时必须取规则与源码并集，不能只选看起来最接近的一行。独立 reviewer 仍按当前完整 diff 审计全部稳定 ID。
+
+| 正在修改什么 | 开发阶段先读 | 第一批 live 源码 |
+|---|---|---|
+| `task`、`bot_task`、system prompt、stop、CoT | `HY3-1*`、`HY3-2a/2e`、`HY3-3*`、`HY3-6a/6e/6f/6i/6j` | `vllm_omni/diffusion/models/hunyuan_image3/prompt_utils.py::{build_prompt_tokens, resolve_stop_token_ids}`；`vllm_omni/entrypoints/openai/serving_chat.py::_build_multistage_generation_inputs`；`vllm_omni/model_executor/stage_input_processors/hunyuan_image3.py::ar2diffusion` |
+| 图片数量、多参考图、online/offline | `HY3-2*`、`HY3-3d`、`HY3-5a/5b`、`HY3-6a/6b/6c/6d/6i/6j` | `vllm_omni/entrypoints/openai/api_server.py::edit_images`；`vllm_omni/entrypoints/openai/serving_chat.py::_build_multistage_generation_inputs`；`examples/offline_inference/hunyuan_image3/end2end.py`；`vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py::get_hunyuan_image_3_pre_process_func` |
+| `size=auto`、ratio token、batch ratio | `HY3-1a/1e/1h`、`HY3-2a/2e`、`HY3-4*`、`HY3-6a/6b/6g/6j` | `vllm_omni/diffusion/models/hunyuan_image3/prompt_utils.py::resolve_stop_token_ids`；`vllm_omni/model_executor/stage_input_processors/hunyuan_image3.py::{_extract_ratio_index, ar2diffusion}`；`vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py::{get_hunyuan_image_3_pre_process_func, prepare_model_inputs, prepare_encode}` |
+| alpha、resize/crop、条件 VAE、seed/RNG | `HY3-2a/2e`、`HY3-5*`、`HY3-6a/6d/6h/6j` | `vllm_omni/diffusion/models/hunyuan_image3/pipeline_hunyuan_image3.py::{_resize_and_crop_center, get_hunyuan_image_3_pre_process_func, prepare_seed, _encode_cond_image, prepare_model_inputs, prepare_encode}`；`vllm_omni/model_executor/models/hunyuan_image3/hunyuan_image3.py::{_parse_and_validate_image_input, _vae_encode}` |
+| shared serving 分层和模型 adapter | `HY3-1g`、`HY3-2a/2e/2f`、`HY3-6a/6b/6i/6j` | `vllm_omni/entrypoints/openai/api_server.py::edit_images`；`vllm_omni/entrypoints/openai/serving_chat.py::_build_multistage_generation_inputs`；模型 owner 的 `vllm_omni/diffusion/models/hunyuan_image3/prompt_utils.py` 和 `vllm_omni/model_executor/stage_input_processors/hunyuan_image3.py` |
+
+- **HY3-0b — 代码地图之后停止读文档。** 打开命中行的第一批源码后就沿 live producer-consumer 调用链实现；只有规则明确链接的官方机制、源码证明跨 owner 或一个具体未知量阻止落盘时，才再读一篇 guide 或增加一个 owner，不能预读 incidents/history。
+
 ## 完整行为链
 
 - **HY3-1a — 编码前行为表。** 涉及 `task`、`bot_task`、system prompt、stop token 或 AR→DiT 数据时，编码前填写下表，并为每行核对官方主入口。
