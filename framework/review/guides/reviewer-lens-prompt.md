@@ -2,6 +2,8 @@
 
 Use this when spawning a read-only review sub-agent. Do not add a suspected root cause unless the task is explicitly finding-closure for an already accepted finding.
 
+正常独立审查先执行 [review execution contract](review-execution-contract.md)，并使用其固定 Markdown 报告和检查脚本。本页是需要完整风险 lens 或专项 owner prompt 时才追加的详细 prompt；只返回本页末尾两行、不交付执行合同中的两张矩阵，仍是 partial review。
+
 ```text
 Static review this PR/diff/change. Do not stop after the first valid finding.
 First classify the change by risk type, then audit every selected risk type.
@@ -158,8 +160,8 @@ Return findings in markdown. For each finding, first state:
 2. why this PR owns it;
 3. the smallest acceptable fix.
 End with:
-"OWNER RULE COVERAGE: <path or none>: X/Y stable IDs inventoried — A pass / B fail / C missing evidence / D not applicable" or "<legacy path>: X/Y source units inventoried — legacy-unstructured, no exact clause-coverage claim" (one line per owner), then
-"RISK TAGS: ...; LENSES: ...; AUDITS RUN: 1,2,3,4[,ingress,path,lifecycle,evidence] — N findings (Pa P0, Pb P1, Pc P2)".
+"OWNER RULE COVERAGE: <path or none>: X/Y stable IDs inventoried — A pass / B fail / C missing evidence / D not applicable" or "OWNER RULE COVERAGE: <legacy path>: X source units inventoried — A pass / B fail / C missing evidence / D not applicable — legacy-unstructured, no exact clause-coverage claim" (one line per owner), then
+"RISK TAGS: ...; LENSES: ..." and then on a separate line "AUDITS RUN: coverage,ingress,producer-consumer,duplication,layering,edge-cases,surface-area[,path,lifecycle,evidence] — N findings (Pa P0, Pb P1, Pc P2)".
 ```
 
 ## Owner prompts

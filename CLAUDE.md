@@ -64,7 +64,7 @@
 |---|---|---|
 | 写代码或修改公开接口 | [code taste](framework/review/guides/code-taste.md) | 先理解现有 owner、调用链、测试和用户可见行为 |
 | 开发完成、准备交给 reviewer 或项目 owner | [维护者审查闭环](framework/agents/guides/agent-loop-workflow.md#开发交付的维护者审查闭环) | 独立 reviewer 全量审 diff，修复后重审，直到没有实质问题 |
-| code review 或 reviewer follow-up | [reviewer lens](framework/review/guides/reviewer-lens-audit.md) | 围绕当前 diff 查重复、边界、异常路径和公开影响 |
+| code review 或 reviewer follow-up | [独立审查执行合同](framework/review/guides/review-execution-contract.md) | 先完成 owner 规则、公开入口和 producer→consumer 覆盖，再开放找问题 |
 | UI、CLI、文档或其他用户可见改动 | [用户可见验收](framework/docs/guides/user-visible-acceptance.md) | 绿测之外还要跑普通用户真实路径 |
 | benchmark 或性能结论 | [benchmark contract](framework/benchmark/guides/benchmark-contract.md) | 先固定版本、工作负载、指标和证据来源 |
 | SSH、容器、远端服务或长跑 | [远端入口](framework/remote/_index.md) | 先验证目标、环境、超时、状态文件和清理边界 |
