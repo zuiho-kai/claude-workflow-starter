@@ -13,6 +13,8 @@
 
 正常开工仍从 `_index.md`、`rules.md` 和职责地图进入，不能要求人或 agent 先猜 incident 路径。
 
+“属于某仓库”不等于“写进仓库根规则”。选择落盘位置前必须先通过[仓库根 `rules.md` 准入门禁](page-rules.md#仓库根-rulesmd-准入门禁)；专项硬约束下沉到对应工作主题或代码 owner，根规则只负责路由。
+
 ## Incident 准入门禁
 
 创建 incident 前，下面三项必须同时有具体答案：

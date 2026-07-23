@@ -13,6 +13,8 @@
 - 共享源码模块专有 → `repos/<仓库>/components/<模块>/rules.md`；
 - 某模型专有 → `repos/<仓库>/models/<模型>/rules.md`。
 
+“仓库专属”不能单独证明应该写进仓库根；动笔前必须通过[仓库根 `rules.md` 准入门禁](../../../contributing/page-rules.md#仓库根-rulesmd-准入门禁)，专项规则下沉到最近 owner，根页只保留路由。
+
 规则必须让没有见过原事故的人也能执行，不依赖日期、issue 编号或聊天上下文。
 
 ## 写文件前先按语义分流
