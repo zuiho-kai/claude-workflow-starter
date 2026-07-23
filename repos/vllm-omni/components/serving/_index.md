@@ -18,3 +18,4 @@
 | 遇到什么 | 查看哪里 |
 |---|---|
 | 理解入口到 engine 的边界 | [architecture](architecture.md) |
+| 修改请求字段、兼容输入、冲突检查或参数传播 | [rules](rules.md) |

@@ -2,7 +2,7 @@
 
 | 遇到什么 | 查看哪里 |
 |---|---|
-| 独立 review、完整 diff review 或交给项目 owner 前验收 | [独立审查执行合同](review-execution-contract.md) |
+| 独立 review、完整 diff review、严格校验全入口覆盖或交给项目 owner 前验收 | [独立审查执行合同](review-execution-contract.md) |
 | 区分框架补丁和算法修复 | [algorithm vs framework](algorithm-vs-framework-fix.md) |
 | 写代码前检查整体品味 | [code taste](code-taste.md) |
 | 审查公开参数和 API | [API surface](code-taste-api-surface.md) |

@@ -70,7 +70,7 @@
 | SSH、容器、远端服务或长跑 | [远端入口](framework/remote/_index.md) | 先验证目标、环境、超时、状态文件和清理边界 |
 | 多 agent 或并行工作 | [agent loop](framework/agents/guides/agent-loop-workflow.md) | 只拆能独立验证的任务，主 agent 复核结论 |
 | 产品规划或 roadmap | [产品闭环](framework/planning/guides/product-loop-planning.md) | 先写用户可感知的完整闭环，再拆技术任务 |
-| 复盘、沉淀经验或总结教训 | [复盘到规则](framework/debug/guides/retrospective-to-rules.md) | 默认更新最近 owner 的规则；只有复杂证据值得长期保留时才新增错题 |
+| 复盘、沉淀经验或总结教训 | [复盘到规则](framework/debug/guides/retrospective-to-rules.md) | 先按语义分流；incident 默认不创建，须通过三项准入门禁 |
 
 仓库入口链接的 `rules.md` 可以增加更严格的门禁，但不能放宽这里的通用 P0。
 
@@ -79,10 +79,10 @@
 - 能反复避免问题、改变下一次行为的结论 → 最近 owner 的 `rules.md`。跨仓库规则放 `framework/<主题>/`，仓库规则放 `repos/<仓库>/`，模块或模型规则继续下沉到对应目录。
 - 稳定的数据流、职责和边界 → 最近 owner 的 `architecture.md`。
 - 需要展开说明但不是硬门禁的方法 → 对应主题的 `guides/`。
-- `incidents/` 只保存规则无法承载的复杂复现、证据链或历史背景；它可有可无，不能成为正常开工必须猜路径才能找到的知识入口。
+- `incidents/` 默认不创建；只有规则与架构已完成、仍有其他载体无法保存的证据、且存在具体未来查询触发时才准入，不能成为正常开工必须猜路径才能找到的知识入口。
 - 当前机器事实 → ignored `local/`。
 
-用户要求“复盘”时，必须回答为什么发生、为什么原有规则或测试没有发现、怎样提前阻止，并把可执行结论写进最近 owner 的 `rules.md`。只有事故过程本身仍有独立查询价值时，才同时保留一篇 incident 并从规则链接过去。
+用户要求“复盘”时，必须回答为什么发生、为什么原有规则或测试没有发现、怎样提前阻止，并在写文件前按语义分流。incident 默认不创建；只有规则和架构已完成、仍有其他载体无法保存的证据、且存在具体未来查询触发时才准入，不能用它收纳从规则中剔除的历史细节。
 
 长期知识禁止写入系统、全局或个人 memory 位置。新增、移动、拆分或删除 Markdown 前先读短入口 [CONTRIBUTING.md](CONTRIBUTING.md)，再按任务只读它链接的一篇专题规范；同步最近的 `_index.md`，然后运行：
 
