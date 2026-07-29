@@ -21,9 +21,9 @@
 | 查看 CI 规则和测试配置 | [ci](ci/_index.md) | vLLM-Omni CI |
 | 查看文档和 RFC 状态 | [docs](docs/_index.md) | 仓库文档入口 |
 | 调查仓库专有 bug、crash 或行为异常 | [debug](debug/_index.md) | 完成通用调试后的仓库二次路由 |
-| 查看配置和开发入口 | [dev](dev/_index.md) | 开发和配置说明 |
+| 查看配置入口、字段归属和构造链路 | [Configuration](components/configuration/_index.md) | 共享配置模块的架构、规则和指南 |
 | 处理分支、PR 和公开证据 | [git](git/_index.md) | 仓库专有 Git/PR 规则 |
 | 跑 benchmark、profiling 或查历史结果 | [benchmark](benchmark/_index.md) | 性能入口 |
 | 在远端验证仓库改动 | [remote](remote/_index.md) | 仓库专有远端策略 |
-| 查看共享代码模块 | [components](components/_index.md) | diffusion、model-executor、serving |
+| 查看共享代码模块 | [components](components/_index.md) | configuration、diffusion、model-executor、serving |
 | 查看支持模型 | [models](models/_index.md) | 模型架构与经验 |

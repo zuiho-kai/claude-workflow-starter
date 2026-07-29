@@ -1,19 +1,58 @@
 # 复盘与错题
 
-## 默认产物是规则
+## 默认先分流，不默认写 rules
 
 用户要求“复盘”、“总结教训”或“沉淀经验”时，先做四件事：
 
 1. 用 live 证据说明为什么发生；
 2. 说明原有规则、校验、测试或路由为什么没发现；
-3. 把“下次怎样提前阻止”写进最近 owner 的 `rules.md`；
-4. 写出能证明新规则真的会拦住同类问题的最小验收。
+3. 完成语义分流台账，允许 `RULE: none`；
+4. 将硬门禁、稳定架构、复用方法和必要历史分别写入对应 owner，并给出各自产物的验收。
 
 `incidents/` 默认不存在。不能因为复盘材料很多、内容已从规则中剔除，或担心“以后也许有用”就增加错题。
 
 正常开工仍从 `_index.md`、`rules.md` 和职责地图进入，不能要求人或 agent 先猜 incident 路径。
 
 “属于某仓库”不等于“写进仓库根规则”。选择落盘位置前必须先通过[仓库根 `rules.md` 准入门禁](page-rules.md#仓库根-rulesmd-准入门禁)；专项硬约束下沉到对应工作主题或代码 owner，根规则只负责路由。
+
+## 动笔前的语义分流台账
+
+复盘先拆内容，再选文件；禁止先打开 `rules.md` 起草整篇内容，然后把明显不合适的段落往外搬。写任何知识正文前，先在工作记录或 commentary 中完成：
+
+```text
+SEMANTIC ROUTING
+- <内容单元> -> RULE / ARCHITECTURE / GUIDE / INCIDENT / DROP
+  owner:
+  reason:
+```
+
+每个内容单元只能有一个正文 owner：
+
+- `RULE`：未来任务必须立即执行的触发条件、必须、禁止和验收；
+- `ARCHITECTURE`：跨任务稳定成立的职责、数据流和边界；
+- `GUIDE`：可复用的操作步骤、命令、判断方法和取舍；
+- `INCIDENT`：通过准入门禁后仍需保存的具体失败原因、时间线和一次性证据；
+- `DROP`：Git/PR 历史已经足够保存，或没有稳定复用价值的内容。
+
+`RULE` 候选必须在台账中同时写出：
+
+```text
+trigger:
+must:
+forbid:
+acceptance:
+```
+
+缺任一项就不能进入 `rules.md`。包含日期、PR/SHA、一次性行数或测试数量、“当时为什么”或多步操作教程的内容默认不是 `RULE`；先考虑 `INCIDENT`、`GUIDE` 或 `DROP`。没有合格的规则候选时，写 `RULE: none` 是合法结果。
+
+正文完成后单独检查规则文件：
+
+```text
+RULES PURITY: <passed candidates>/<all candidates>
+DUPLICATE BODY: none | <重复正文及唯一保留位置>
+```
+
+逐条确认新增规则脱离原事故仍可执行、下一次开工确实必须立即看到，并且只链接 guide/architecture/incident 而不复制其正文。`python tools/check_knowledge_tree.py` 只验证结构和链接，不能替代这项语义检查。
 
 ## Incident 准入门禁
 

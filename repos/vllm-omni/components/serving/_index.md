@@ -19,3 +19,4 @@
 |---|---|
 | 理解入口到 engine 的边界 | [architecture](architecture.md) |
 | 修改请求字段、兼容输入、冲突检查或参数传播 | [rules](rules.md) |
+| Request-extra 修复扩张成完整 compiler、边界校验后下游仍重读 raw request、reviewer 修复反复扩张或测试减法声明与净 diff 不符 | [serving 错题](incidents/_index.md) |

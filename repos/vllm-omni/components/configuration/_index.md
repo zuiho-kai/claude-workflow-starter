@@ -1,0 +1,25 @@
+# vLLM-Omni Configuration
+
+- 主要源码：`vllm_omni/config/`
+- 跨边界入口：`vllm_omni/diffusion/data.py`、`vllm_omni/engine/arg_utils.py`、`vllm_omni/engine/stage_init_utils.py`、`vllm_omni/engine/async_omni_engine.py`
+- 主要测试：`tests/config/`、`tests/test_config_factory.py`、`tests/test_diffusion_config_propagation.py`，以及各公开入口附近的配置测试
+
+## 什么时候查这里
+
+- 修改 deploy、pipeline、stage、CLI、默认 factory 或 direct kwargs 的配置构造。
+- 调查字段来源优先级、alias、flat→nested、strict unknown-field 校验、shared/stage/diffusion owner 分区。
+- 核对 structured、legacy startup、默认 single-stage factory 和 direct factory 的语义一致性。
+
+## 不放什么
+
+- HTTP 请求字段和 serving 层限制；这些属于 [Serving](../serving/_index.md)。
+- 最终 stage config 之后的并行与设备启动；这些属于 [Model Executor](../model-executor/_index.md)。
+- 某个模型独有的配置或 checkpoint 语义；这些放模型目录。
+
+## 目录内容
+
+| 遇到什么 | 查看哪里 |
+|---|---|
+| 理解配置从 deploy、CLI、默认 factory 到 structured/legacy config 的稳定边界 | [配置构造架构](architecture.md) |
+| 修改配置字段、strict schema、归一化、默认 factory 或新老入口 | [配置开发门禁](rules.md) |
+| 审计配置来源、多层加工或初始化参数 | [configuration guides](guides/_index.md) |
