@@ -22,14 +22,13 @@ inventory. Mark each selected ID PASS / FAIL / MISSING_EVIDENCE /
 NOT_APPLICABLE with file/function/test/run evidence. N/A also needs evidence;
 omission cannot produce a clean result. Group/namespace headings do not count
 as IDs. For an ID with a fixed evidence matrix, report every triggered row; one
-missing row prevents PASS. When an old rules
-page has no stable sub-IDs, treat each bullet or prose paragraph as one source
-unit, quote it, and list every normative requirement you identify inside it.
-Report that page as legacy-unstructured; do not claim exact clause coverage or
-try to infer cardinality from keywords. If the current diff materially edits
-that rule, require stable IDs under the contribution rules. If no owner rules.md exists, write
-"OWNER RULES: none" and continue. Do not search incidents/history to invent
-hidden rules. Novel findings do not offset a missed owner invariant.
+missing row prevents PASS. When an old rules page has no stable sub-IDs, quote
+the requirements relevant to the current diff and state the coverage boundary.
+Do not mechanically count bullets or prose paragraphs, and do not claim exact
+clause coverage. If the current diff materially edits that rule, require stable
+IDs under the contribution rules. If no owner rules.md exists, state that
+plainly and continue. Do not search incidents/history to invent hidden rules.
+Novel findings do not offset a missed owner invariant.
 
 Return all matching risk tags with one file/function evidence each:
 - public API / user-facing contract
@@ -158,26 +157,46 @@ compatibility, or regression safety. Verify:
   - screenshots are not the only proof
 Flag unproven claims as findings.
 
+Before open-ended findings, run a subtraction audit. Read the pre-code
+production budget, report the actual production +/-, changed production files,
+and count of added production abstractions. Cluster abstractions that transform
+the same input, produce the same owner artifact, or form one
+normalize->validate->route->project chain. For each cluster, derive the minimum
+owner design without copying the current implementation. Then inventory every
+added helper, class, normalizer, validator, allowlist, compiler, intermediate
+object, and independent routing flow. Keep one only with a concrete
+`INVARIANT:`, `REUSE:`, or `NET_DELETE:` survival proof and a real final
+consumer. Multiple callers alone do not prove reuse: their local semantics must
+be deleted and replaced by one owner artifact. If the pre-code budget is
+missing, actual additions exceed budget, the current cluster exceeds its
+minimum owner design, or an abstraction has no survival proof, emit a blocking
+finding. Review comments and green tests are acceptance evidence, not
+justification for one production branch per case.
+
 Return findings in markdown. For each finding, first state:
 1. what bad thing can happen;
 2. why this PR owns it;
 3. the smallest acceptable fix.
 Give every blocking finding a stable local ID such as `P1 F1`. On the same
-finding line include `DIFF:`, `PATH:`, `CONTRACT:`, `FAILURE:`,
-`COUNTEREVIDENCE:`, and `FIX:`. Architecture suspicion without all six is an
-investigation note, not a P0/P1/P2. In the owner audit,
-map every `FAIL` to `FINDING:F1`; map `MISSING_EVIDENCE` to a finding or a
-specific `DRAFT:<blocked evidence>` reason. For each public ingress, name the
-actual dispatcher, first expensive operation, and owner adapter/consumer;
-the existence of an unused helper is not coverage.
-Every finding must also be referenced by an owner-row Disposition; if no
-existing owner rule applies, put `OWNER_RULE:NONE` after its F ID. When two
-parallel reviewers are merged, re-evaluate affected PASS/NOT_APPLICABLE rows
-instead of appending the second reviewer's prose unchanged.
-End with one `OWNER RULE GROUPS: <path>: core,<triggered groups>` line for each
-grouped owner, then:
-"OWNER RULE COVERAGE: <path or none>: X/Y stable IDs inventoried — A pass / B fail / C missing evidence / D not applicable" or "OWNER RULE COVERAGE: <legacy path>: X source units inventoried — A pass / B fail / C missing evidence / D not applicable — legacy-unstructured, no exact clause-coverage claim" (one line per owner), then
-"RISK TAGS: ...; LENSES: ..." and then on a separate line "AUDITS RUN: coverage,ingress,producer-consumer,duplication,layering,edge-cases,surface-area[,path,lifecycle,evidence] — N findings (Pa P0, Pb P1, Pc P2)".
+finding, explain the changed hunk, reachable path, pre-existing contract,
+user-visible failure, canonical counterevidence checked, and smallest safe
+fix. Use any clear order and wording; fixed labels or a single-line format are
+not required. Architecture suspicion without this evidence is an investigation
+note, not a P0/P1/P2. In the owner audit,
+Connect every `FAIL` to a concrete finding and explain every
+`MISSING_EVIDENCE` with the exact blocked test, dependency, runtime, or
+artifact. For each public ingress, name the actual dispatcher, first expensive
+operation, and owner adapter/consumer; the existence of an unused helper is
+not coverage. When two parallel reviews are merged, re-evaluate affected
+PASS/NOT_APPLICABLE conclusions instead of appending the second reviewer's
+prose unchanged.
+
+Write the report for a maintainer. Use any clear combination of prose, lists,
+or tables. Do not optimize wording for a Markdown parser. End with a concise
+human-readable summary of selected owners/groups, stable-ID coverage, audits
+performed, open finding counts, and validation blockers. Rules without stable
+IDs should be quoted directly with an explicit coverage boundary; do not
+invent mechanical legacy numbering.
 ```
 
 ## Owner prompts
