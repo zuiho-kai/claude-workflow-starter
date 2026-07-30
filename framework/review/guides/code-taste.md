@@ -25,16 +25,29 @@
 6. **注释解释策略。** 注释只解释 upstream 对齐、多分支选择、不变量、非显然边界；不要解释语法。
 7. **diff 自带说服力。** 提交前按 [全量 diff 审查](reviewer-lens-gates.md#full-diff-review) 确认真实基线、当前 tracked 改动和属于本任务的 untracked 文件。文件列表、命名、注释、测试位置、helper 复用、silent fallback 都要经得起第一眼 review。
 8. **条件分支要有正反对照。** 新增或修改选择、过滤、拦截或路由条件时，必须从同一个对外或生产入口至少测一个“应进入”和一个“不应进入”的例子，并断言用户或系统能观察到的结果。两个输入结构相同但语义不同时尤其容易漏测；只测负路径会让“把整个功能禁用”也误绿。
-9. **规模膨胀触发架构重置。** 非琐碎改动编码前记录生产代码的预期新增区间、准备删除或替换的旧块，以及唯一 owner 的最终产物；行数是架构报警器，不是越短越好的 KPI。实际生产新增超过预期上限的 1.5 倍、出现第二套语义重叠的 contract/compiler/normalizer/conflict formatter、同一字段在 global/stage 或多个 dispatcher 重复转换、或第二个 review 波次再次发现同一 owner 不变量遗漏时，立即冻结 diff，禁止继续添加特殊分支和逐 comment 测试。恢复编码前必须重新给出完整输入矩阵、唯一最终产物、准备删除的重复实现和新的规模上限；测试新增不计入生产预算，也不能抵消生产结构失控。
+9. **规模膨胀触发架构重置。** 非琐碎改动编码前记录生产代码的预期新增区间、预期新增 abstraction 数、准备删除或替换的旧块，以及唯一 owner 的最终产物；行数是架构报警器，不是越短越好的 KPI。实际生产新增超过预期上限、出现第二套语义重叠的 contract/compiler/normalizer/allowlist/conflict formatter、同一字段在 global/stage 或多个 dispatcher 重复转换、或第二个 review 波次再次发现同一 owner 不变量遗漏时，立即冻结 diff，禁止继续添加特殊分支和逐 comment 生产逻辑。恢复编码前必须重新给出完整输入矩阵、唯一最终产物、准备删除的重复实现和新的规模上限；测试新增不计入生产预算，也不能抵消生产结构失控。历史 finding 只是验收样例，不是生产 abstraction 清单：多个 finding 能由同一个 owner 不变量关闭时，必须合并实现，优先把不同案例放进参数化测试。
+
+新增 production helper、class、normalizer、validator、allowlist、compiler、中间对象或独立路由流程时，作者必须给出一项可核对的生存证明：
+
+- `INVARIANT:` 它独立拥有哪个现有 abstraction 无法表达的行为不变量；
+- `REUSE:` 哪些真实生产 caller 共用它，且不会泄漏 caller 专属语义；
+- `NET_DELETE:` 它替换或删除了哪些已有生产块，最终概念和分支净减少。
+
+只说“更清晰”“方便扩展”“统一一下”或“reviewer 提了很多问题”不算证明。三项都给不出时必须删除、内联、复用现有 owner，或把案例移到测试；不能继续拆 helper 来整理已经过量的 helper。
+
+逐项生存证明只是必要条件，不是充分条件。作者还必须把处理同一输入、产出同一 owner artifact、或连续执行 normalize→validate→route→project 的新增 abstraction 归为一个语义簇，先写出不考虑当前实现的最小 owner 设计，再比较当前簇。`REUSE:` 只有在 caller 删除了各自的重复语义、共同消费同一 owner 产物时才成立；“被多个 caller 调用”本身不算复用。当前簇比最小设计多出的每一层必须证明不可合并的 representation、lifecycle 或 failure-policy 边界，否则整簇继续做减法，不能给每层分别找一个局部理由后全部保留。编码前预算缺失本身触发架构重置，不能事后补一个宽松数字恢复 PASS。
 
 ## 架构重置怎样验收
 
 触发上面的重置门禁后，不能只把 helper 改名或把重复分支搬进另一个文件。重新实现完成时必须同时满足：
 
 - 报告最初预算、触发重置时的实际生产 diff、重构后的实际生产 diff和删除项；
+- 枚举当前 diff 新增的每个 production abstraction，并逐项给出 `INVARIANT:`、`REUSE:` 或 `NET_DELETE:` 生存证明；枚举数必须与 diff census 一致；
 - 每类语义只有一个 owner 产物，下游只消费该产物，不再重新解析、合并或静默跳过字段；
 - 同类 reviewer finding 由一份输入/consumer 决策表统一关闭，不按评论数量增加条件分支；
 - 参数化测试从同一份决策表产生，并至少走到一个真实最终 consumer；测试数量和通过数量不能充当架构正确的证据。
+
+减法审查和正确性审查分两轮：先按预算和生存证明删除不必要 abstraction，冻结精简后的完整 diff；再从公开入口执行 producer→consumer、兼容性和负向路径审查。第二轮 finding 默认复用现有 owner 或补验收，只有证明出现新的独立不变量时，才允许恢复生产 abstraction。声称“已经做减法”时按 [subtraction claim audit](reviewer-lens-gates.md#subtraction-claim-audit) 同时报告当前 PR 总量和减法前后净变化，不能只选较好看的一个数字。
 
 ## 写完不等于完成
 
