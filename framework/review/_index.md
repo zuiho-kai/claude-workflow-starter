@@ -13,4 +13,5 @@
 
 | 遇到什么 | 查看哪里 | 说明 |
 |---|---|---|
-| 从维护者视角审查当前改动 | [代码审查指南](guides/_index.md) | 代码品味、改动边界和审查清单 |
+| 从维护者视角审查当前改动，或只拿到 PR 链接 | [独立审查执行合同](guides/review-execution-contract.md) | 同时完成覆盖、减法和 correctness/open review |
+| 查找其他审查专项 | [guides 索引](guides/_index.md) | 只继续读取当前风险命中的专项 |

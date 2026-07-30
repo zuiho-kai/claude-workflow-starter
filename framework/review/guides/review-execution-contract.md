@@ -7,10 +7,56 @@
 审查分三轮，顺序不能交换：
 
 1. **覆盖轮：** 冻结基线和完整 diff。owner 定义审查触发组时，选择 `core` 加当前 diff 命中的组并完整枚举组内稳定 ID；没有触发组时才枚举该 owner 全部稳定 ID。随后填写当前可达公开入口和 changed-value producer→consumer 表。
-2. **减法轮：** 读取编码前生产预算，统计实际 production additions、files 和新增 abstraction。先按共同输入、owner artifact 和连续 transformation 把新增 abstraction 归簇，为每簇写出不依赖当前实现的最小 owner 设计；再对每个新增 helper、class、normalizer、validator、allowlist、compiler、中间对象或独立路由流程给出 `INVARIANT:`、`REUSE:` 或 `NET_DELETE:` 生存证明。缺少编码前预算、当前 abstraction 总数大于最小 owner 设计、或任一项给不出证明时必须形成 blocking finding；不能用测试数量、历史 comment 数量、多 caller 或“以后扩展”证明其必要。
+2. **减法轮：** 读取编码前生产预算，统计实际 production additions、files 和新增 abstraction。先按共同输入、owner artifact 和连续 transformation 把新增 abstraction 归簇，为每簇写出不依赖当前实现的最小 owner 设计；再对每个新增 helper、class、normalizer、validator、allowlist、compiler、中间对象或独立路由流程给出 `INVARIANT:`、`REUSE:` 或 `NET_DELETE:` 生存证明。缺少编码前预算时记 `MISSING_EVIDENCE`，阻止 `clean/ready` 结论但不能冒充代码 finding；当前 abstraction 总数大于最小 owner 设计、或任一项给不出生存证明时才形成 blocking finding。不能用测试数量、历史 comment 数量、多 caller 或“以后扩展”证明其必要。
 3. **开放轮：** 再查 duplication、layering、edge cases、surface area 和命中的专项风险。
 
 找到很多新问题不能代替覆盖轮或减法轮。不能为了省事漏掉命中组，也不能为了“更全面”把未触发组全部展开成噪声。缺少所选规则行、可达入口、changed-value consumer、编码前预算或新增 abstraction census 时，结论只能是 `partial review`；不能说 `clean`、`ready` 或 `fully reviewed`。
+
+任一轮发现 P0/P1/P2 都不能提前结束其余轮次。最终报告必须分别给出 **subtraction verdict** 和 **correctness verdict**：前者列出 scope 删除项与架构减法，或用完整 ledger 证明当前已是最小设计；后者列出行为 finding 或 clean 证据。只给一个综合的“建议/不建议合并”，或用 blocking bug 代替减法结果，审查仍未完成。
+
+### 默认双角色
+
+每次 PR review 都包含两个不可互相替代的角色：
+
+- **Correctness reviewer：** 从公开入口追 producer→consumer，检查行为、错误合同、兼容路径、默认值、最终 consumer 和测试证据。
+- **Design/subtraction reviewer：** 先做 project-level scope subtraction，对齐用户目标和当前 RFC/mini spec 切片，删除越界 behavior、文件和测试；再做 module-level architecture subtraction，检查唯一 owner、最小数据流、最小修改、现有 abstraction 复用，以及可删除、合并、内联或迁回既有 owner 的层。
+
+有 multi-agent 能力时，非琐碎 PR 的审查负责人在冻结 base/head 和授权合同后，必须立即调用委派能力并行启动两个独立只读 reviewer；不能只在 prompt 里描述两个角色，也不能由同一 agent 悄悄兼任。两个 reviewer 使用相同冻结输入，不能互看 finding：
+
+- correctness reviewer 返回可达入口、producer→consumer、行为 finding、反证和测试边界；
+- design/subtraction reviewer 必须同时返回 project-level scope ledger，以及 module-level census、最小设计、逐项 `KEEP / INLINE / MERGE / MOVE / DELETE` 账本和净结果。
+
+审查负责人必须等待两个结果再收口。单文件且没有新增 public behavior、owner、abstraction 或兼容路径的窄 diff 可以由一个 reviewer 顺序执行两个角色，但仍必须分别交付两个 verdict。当前环境确实不能委派时，明确写“multi-agent unavailable”，再由主 agent 顺序执行；不得把未尝试委派说成能力不可用。任一角色缺失都只能报 `partial review`。
+
+### 解释压力反查
+
+减法轮必须用当前最终 head 做一次不依赖提交历史的“人话解释”：只说现在有哪些输入、每个 source × scope 的唯一 owner 规范产物是什么、谁最终消费，不能按 commit、review comment 或修复时间线解释。如果必须靠历史才能说明当前结构，先判定当前设计本身没有自洽。
+
+解释时出现下面任一信号，reviewer 必须回到代码定位对应结构，不能只润色文档或增加注释：
+
+- 两个字段组、helper 或中间对象没有不同 consumer，最终只是立即求并集、转发或拆开后再合并；
+- 同一 owner 产物跨层不断换名，尤其把已校验 projection 又叫回 raw request、`extra_body`、kwargs 或 config；
+- normalizer、builder 或 materializer 已产出最终值，下游 dispatcher、consumer 或 model 仍要重新读原始输入、补默认值、重做 alias 或再次决定优先级；
+- 用户要求或编码前 mini spec/合同声明某职责是 non-goal，但 production diff 又修改了该职责的真实 consumer；
+- 无法为每个 source × scope 单元指出一次明确的 `输入 → owner 规范产物 → 最终 consumer`；合法的 representation 或 lifecycle adapter 可以保留，但必须消费同一规范产物，不能重新决定语义。owner-local legacy fallback 若已在矩阵声明优先级且最终只产出一个规范值，不算重复 owner。
+
+每个命中信号必须写出“当前结构 → 不依赖当前实现的最小结构 → 可删除或应迁移的具体项”。只有能证明 representation、lifecycle 或 failure-policy 不同，才允许保留额外层；“兼容复杂”“测试很多”“这样更清晰”不是反证。解释困难本身不是 blocking finding，但它触发的重复 abstraction、错误 owner、误导命名或末端补偿必须进入正式 finding。
+
+### 减法轮交付合同
+
+减法轮先做 **scope subtraction**，再做 **architecture subtraction**。当前 diff 新增的行为不自动成为必须保留的合同；保留边界只来自用户目标、编码前 mini spec/RFC 当前切片和 base 已有兼容行为。
+
+减法轮必须在 correctness 和开放轮 finding 之前单独交付以下五项：
+
+1. **Scope ledger：** 把每个新增 production behavior、文件和测试组映射到用户目标或当前 RFC/mini spec 的明确 merge condition；无法映射的项标记 `DELETE / DEFER`，并恢复 base 行为。不能用“当前测试依赖”“顺便修好”或 PR body 已经宣传该行为作为保留理由。多 PR RFC 只允许当前切片进入后续 census。
+2. **当前 census：** 只对 scope ledger 保留的实现枚举新增或扩张的 production helper、class、field group、allowlist、owner projection、跨层中间 artifact 和末端补偿流程；相同文件里的多个对象不能合并成“一个模块”跳过。普通局部变量、只为一次循环组织数据的 tuple/dict 和无语义分支的表达式不单独计 abstraction，除非它们承担 owner、projection、precedence 或 lifecycle 边界。
+3. **最小设计：** 在完整实现当前授权目标、同时保持 scope 外 base 行为不变的前提下，写出最少需要的 owner artifact、转换和 consumer。不得删减用户目标；也不得把当前 diff 未获授权的新行为伪装成兼容合同。
+4. **逐项减法账本：** 对 census 每一项标记 `KEEP / INLINE / MERGE / MOVE / DELETE`，给出当前代码锚点和理由。`INLINE` 必须删除 callable、独立分支或 owner 边界，内联局部变量不算；`MOVE` 只有复用已有 owner 并同时删除旧 owner 或重复流程才算。换文件、改名、少一个临时变量或再包一层都不算减法。
+5. **净结果：** 先报告 scope subtraction 删除的行为、production 文件和测试组，再报告 architecture subtraction 中 abstraction、owner、重复 projection、末端补偿和 production 分支分别净减少多少。行数只作佐证，不能用删注释或格式变化充数。
+
+减法轮的 `PASS` 只有两种：先证明 scope ledger 没有未授权行为，再给出可执行的删除/合并/内联方案；或逐项证明保留范围和当前 census 已分别等于授权 scope 与最小设计。只报告字段丢失、入口绕过、错误优先级、未知字段未拒绝等 correctness bug，即使都是真的，也算减法轮 `FAIL`；这些 finding 留到后续轮次。用于验证知识规则是否生效的已知 scope-creep 样例，如果 reviewer 只删局部 helper、没有提出删除整块未授权行为及其测试，规则实验必须判 `FAIL`。
+
+### Source-consumer decision matrix
 
 同一用户语义如果有多个输入来源、dispatcher、stage 类型或兼容入口，覆盖轮还必须先写完**来源 × consumer scope 决策矩阵**，再读具体实现。每个 source/scope 单元格只能标成：路由到哪个 consumer、与哪些来源重复时拒绝、明确不适用，或非用户 default；不能留给字典合并顺序和分支先后隐式决定。至少验证每个合法单来源、每组同 scope 重复、一个跨 scope 共存 control，以及每条 production dispatcher 的等价结果。矩阵缺失时，即使当前测试和开放轮没有 finding，也只能报 `partial review`。
 
